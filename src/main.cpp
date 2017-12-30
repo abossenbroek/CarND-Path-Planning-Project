@@ -191,6 +191,12 @@ int main() {
 		map_waypoints_dy.push_back(d_y);
 	}
 
+	// What lane do we want to start in.
+  int lane = 1;
+
+  // Have a reference velocity to target.
+  double ref_vel = 49.5; // mph
+
 	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy](
 			uWS::WebSocket <uWS::SERVER> ws, char *data, size_t length,
 			uWS::OpCode opCode) {
@@ -228,6 +234,48 @@ int main() {
 
 						// Sensor Fusion Data, a list of all other cars on the same side of the road.
 						auto sensor_fusion = j[1]["sensor_fusion"];
+
+            // How many reference points where not yet consumed by the simulator?
+            int prev_size = previous_path_x.size();
+
+            // Create a list of widely spaced (x, y) waypoints. Which we will space evenly at 30m
+            // we will use these points to interpolate between with a single spline
+
+            vector<double> ptsx;
+            vector<double> ptsy;
+
+            // reference x, y, yaw states
+            // either we will reference the car starting point or the previous path end point
+            double ref_x = car_x;
+            double ref_y = car_y;
+            double ref_yaw = deg2rad(car_yaw);
+
+            // if previous size is almost empty, use the car as starting reference
+            if (prev_size < 2) {
+              double prev_car_x = car_x - cos(car_yaw);
+              double prev_car_y = car_y - sin(car_yaw);
+
+              // Use two points to make the path tangent to the previous path's end point.
+              ptsx.push_back(prev_car_x);
+              ptsx.push_back(car_x);
+
+              ptsy.push_back(prev_car_y);
+              ptsy.push_back(car_y);
+            } else {
+              ref_x = previous_path_x[prev_size - 1];
+              ref_y = previous_path_y[prev_size - 1];
+
+              double ref_x_prev = previous_path_x[prev_size - 2];
+              double ref_y_prev = previous_path_y[prev_size - 2];
+              ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
+
+              ptsx.push_back(ref_x_prev);
+              ptsx.push_back(ref_x);
+
+              ptsy.push_back(ref_y_prev);
+              ptsy.push_back(ref_y);
+            }
+
 
 						json msgJson;
 
