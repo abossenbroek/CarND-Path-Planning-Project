@@ -9,6 +9,8 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 
+#include "spline.h"
+
 using namespace std;
 
 // for convenience
@@ -197,7 +199,7 @@ int main() {
   // Have a reference velocity to target.
   double ref_vel = 49.5; // mph
 
-	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy](
+	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane, &ref_vel](
 			uWS::WebSocket <uWS::SERVER> ws, char *data, size_t length,
 			uWS::OpCode opCode) {
 			// "42" at the start of the message means there's a websocket message event.
@@ -276,26 +278,60 @@ int main() {
               ptsy.push_back(ref_y);
             }
 
+            vector<double> next_wp0 = getXY(car_s + 30.0, 2 + 4 * lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            vector<double> next_wp1 = getXY(car_s + 60.0, 2 + 4 * lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            vector<double> next_wp2 = getXY(car_s + 90.0, 2 + 4 * lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
-						json msgJson;
+            ptsx.push_back(next_wp0[0]);
+            ptsx.push_back(next_wp1[0]);
+            ptsx.push_back(next_wp2[0]);
 
-						vector<double> next_x_vals;
+            ptsy.push_back(next_wp0[1]);
+            ptsy.push_back(next_wp1[1]);
+            ptsy.push_back(next_wp2[1]);
+
+            for (int i = 0; i < ptsx.size(); ++i) {
+              double shift_x = ptsx[i] - ref_x;
+              double shift_y = ptsy[i] - ref_y;
+
+              ptsx[i] = shift_x * cos(-ref_yaw) - shift_y * sin(-ref_yaw);
+              ptsy[i] = shift_x * sin(-ref_yaw) + shift_y * cos(-ref_yaw);
+            }
+
+            tk::spline spline;
+            spline.set_points(ptsx, ptsy);
+
+            vector<double> next_x_vals;
 						vector<double> next_y_vals;
 
-						double dist_inc = 0.5;
+            for (int i = 0; i < previous_path_x.size(); ++i) {
+              next_x_vals.push_back(previous_path_x[i]);
+              next_y_vals.push_back(previous_path_y[i]);
+            }
 
-						// Generate next 50 points using Frenet coordinates.
-						for (int i = 0; i < 50; ++i) {
-							double next_s = car_s + (i + 1) * dist_inc;
-							double next_d = 6;
-							vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            double target_x = 30.0;
+            double target_y = spline(target_x);
+            double target_dist = sqrt(target_x * target_x + target_y * target_y);
 
-							next_x_vals.push_back(xy[0]);
-							next_y_vals.push_back(xy[1]);
-						}
+            double x_add_on = 0.0;
+
+            for (int i = 0; i <= 50 - previous_path_x.size(); ++i) {
+              double N = target_dist / (0.02 * ref_vel / 2.24);
+              double x_point = x_add_on + target_x / N;
+              double y_point = spline(x_point);
+
+              x_add_on = x_point;
+
+              double x_point_glob = x_point * cos(ref_yaw) - y_point * sin(ref_yaw) + ref_x;
+              double y_point_glob = x_point * sin(ref_yaw) + y_point * cos(ref_yaw) + ref_y;
+
+              next_x_vals.push_back(x_point_glob);
+              next_y_vals.push_back(y_point_glob);
+            }
 
 
 						// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+						json msgJson;
 						msgJson["next_x"] = next_x_vals;
 						msgJson["next_y"] = next_y_vals;
 
