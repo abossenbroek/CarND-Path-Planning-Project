@@ -259,6 +259,7 @@ int main() {
 
             bool too_close = false;
 
+            // TODO: find ref_v to use
             for (auto v : vehicles) {
               if (v.possible_collision(car_s, lane)) {
                 cerr << "Possible collision detected with car: " << v.id() << endl;
@@ -274,35 +275,6 @@ int main() {
               }
             }
 
-//            // find ref_v to use
-//            for (int i = 0; i < sensor_fusion.size(); ++i) {
-//              // car is in my lane
-//              double d = sensor_fusion[i][6];
-//
-//              if (d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2)) {
-//                double vx = sensor_fusion[i][3];
-//                double vy = sensor_fusion[i][4];
-//                double check_speed = sqrt(vx * vx + vy * vy);
-//                double check_car_s = sensor_fusion[i][5];
-//
-//                // Use future position car to determine whether we will collide with car.
-//                check_car_s += prev_size * 0.02 * check_speed;
-//
-//                if (check_car_s > car_s && (check_car_s - car_s) < COLLISION_DISTANCE) {
-//                  // TODO: take action if car is in our lane
-//                  too_close = true;
-//
-//                  // TODO: add feasibility of lane change, e.g. check if there is a car in the lane
-//                  // check if there are gaps where we could go, if left lane is not possible, go right lane
-//                  // these are the finite states.
-//                  if (lane > 0) {
-//                    lane = 0;
-//                  }
-//                }
-//
-//              }
-//            }
-//
             // Create a list of widely spaced (x, y) waypoints. Which we will space evenly at 30m
             // we will use these points to interpolate between with a single spline
             vector<double> ptsx;
