@@ -272,7 +272,13 @@ int main() {
                 if (check_car_s > car_s && (check_car_s - car_s) < COLLISION_DISTANCE) {
                   // TODO: take action if car is in our lane
                   too_close = true;
-                  ref_vel = 29.5; // mph
+
+                  // TODO: add feasibility of lane change, e.g. check if there is a car in the lane
+                  // check if there are gaps where we could go, if left lane is not possible, go right lane
+                  // these are the finite states.
+                  if (lane > 0) {
+                    lane = 0;
+                  }
                 }
 
               }
