@@ -116,3 +116,14 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# Vim files
+*.swp
+*~
+.*swp
+.*~
+
+# CMake
+build/*
+
+
+
