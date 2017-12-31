@@ -10,9 +10,8 @@
 #include "json.hpp"
 
 #include "spline.h"
+#include "vehicle.hpp"
 
-// Range within which a car in a similar lane will be considered to be in collision distance
-#define COLLISION_DISTANCE 30
 
 using namespace std;
 
@@ -239,9 +238,14 @@ int main() {
 
 						// Sensor Fusion Data, a list of all other cars on the same side of the road.
 						auto sensor_fusion = j[1]["sensor_fusion"];
+            vector<Vehicle> vehicles;
 
             // How many reference points where not yet consumed by the simulator?
             int prev_size = previous_path_x.size();
+
+            for (int i = 0; i < sensor_fusion.size(); ++i) {
+              vehicles.push_back(Vehicle(sensor_fusion[i], prev_size));
+            }
 
             // What lane do we want to start in.
             int lane = 1;
@@ -255,35 +259,50 @@ int main() {
 
             bool too_close = false;
 
-            // find ref_v to use
-            for (int i = 0; i < sensor_fusion.size(); ++i) {
-              // car is in my lane
-              double d = sensor_fusion[i][6];
+            for (auto v : vehicles) {
+              if (v.possible_collision(car_s, lane)) {
+                cerr << "Possible collision detected with car: " << v.id() << endl;
+                // TODO: take action if car is in our lane
+                too_close = true;
 
-              if (d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2)) {
-                double vx = sensor_fusion[i][3];
-                double vy = sensor_fusion[i][4];
-                double check_speed = sqrt(vx * vx + vy * vy);
-                double check_car_s = sensor_fusion[i][5];
-
-                // Use future position car to determine whether we will collide with car.
-                check_car_s += prev_size * 0.02 * check_speed;
-
-                if (check_car_s > car_s && (check_car_s - car_s) < COLLISION_DISTANCE) {
-                  // TODO: take action if car is in our lane
-                  too_close = true;
-
-                  // TODO: add feasibility of lane change, e.g. check if there is a car in the lane
-                  // check if there are gaps where we could go, if left lane is not possible, go right lane
-                  // these are the finite states.
-                  if (lane > 0) {
-                    lane = 0;
-                  }
+                // TODO: add feasibility of lane change, e.g. check if there is a car in the lane
+                // check if there are gaps where we could go, if left lane is not possible, go right lane
+                // these are the finite states.
+                if (lane > 0) {
+                  lane = 0;
                 }
-
               }
             }
 
+//            // find ref_v to use
+//            for (int i = 0; i < sensor_fusion.size(); ++i) {
+//              // car is in my lane
+//              double d = sensor_fusion[i][6];
+//
+//              if (d < (2 + 4 * lane + 2) && d > (2 + 4 * lane - 2)) {
+//                double vx = sensor_fusion[i][3];
+//                double vy = sensor_fusion[i][4];
+//                double check_speed = sqrt(vx * vx + vy * vy);
+//                double check_car_s = sensor_fusion[i][5];
+//
+//                // Use future position car to determine whether we will collide with car.
+//                check_car_s += prev_size * 0.02 * check_speed;
+//
+//                if (check_car_s > car_s && (check_car_s - car_s) < COLLISION_DISTANCE) {
+//                  // TODO: take action if car is in our lane
+//                  too_close = true;
+//
+//                  // TODO: add feasibility of lane change, e.g. check if there is a car in the lane
+//                  // check if there are gaps where we could go, if left lane is not possible, go right lane
+//                  // these are the finite states.
+//                  if (lane > 0) {
+//                    lane = 0;
+//                  }
+//                }
+//
+//              }
+//            }
+//
             // Create a list of widely spaced (x, y) waypoints. Which we will space evenly at 30m
             // we will use these points to interpolate between with a single spline
             vector<double> ptsx;
