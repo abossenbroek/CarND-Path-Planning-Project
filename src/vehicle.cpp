@@ -1,23 +1,7 @@
-/*
- * =====================================================================================
- *
- *       Filename:  vehicle.cpp
- *
- *    Description:
- *
- *        Version:  1.0
- *        Created:  31/12/17 13:50:26
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  YOUR NAME (),
- *   Organization:
- *
- * =====================================================================================
- */
 #include <stdlib.h>
 #include <math.h>
 
+#include "utilities.hpp"
 #include "vehicle.hpp"
 #include "json.hpp"
 
@@ -61,8 +45,11 @@ Vehicle::in_front(double s)
 }
 
 bool
-Vehicle::possible_collision(double s, int lane)
+Vehicle::possible_collision(double s, int lane, double speed)
 {
-  return this->in_front(s) && (this->future_s() - s) < COLLISION_DISTANCE && this->in_lane(lane);
+  // We want to detect at least 10 seconds at the speed we are as collision
+  // detection
+  double collision_distance = speed / MPH_TO_MS_CONSTANT * 10.0;
+  return this->in_front(s) && (this->future_s() - s) < collision_distance && this->in_lane(lane);
 }
 

@@ -110,9 +110,10 @@ int main() {
             int prev_size = previous_path_x.size();
 
             Ego ego(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane,
-                egoState, &previous_path_x, &previous_path_y, end_path_s,
+                ref_vel, egoState, &previous_path_x, &previous_path_y, end_path_s,
                 end_path_d, &map_waypoints_s, &map_waypoints_x,
                 &map_waypoints_y);
+            ego.addVehicles(sensor_fusion, prev_size);
 
             //ego.addVehicles(sensor_fusion, prev_size);
             for (int i = 0; i < sensor_fusion.size(); ++i) {
@@ -128,30 +129,29 @@ int main() {
             bool too_close = false;
 
             // TODO: find ref_v to use
-            for (auto v : vehicles) {
-              if (v.possible_collision(car_s, lane)) {
-                cerr << "Possible collision detected with car: " << v.id() << endl;
-                // TODO: take action if car is in our lane
-                too_close = true;
-
-                // TODO: add feasibility of lane change, e.g. check if there is a car in the lane
-                // check if there are gaps where we could go, if left lane is not possible, go right lane
-                // these are the finite states.
-                if (lane > 0) {
-                  lane = 0;
-                }
-              }
-            }
-
-            // Generate initial trajectory.
-//            Trajectory traj(&ego, &previous_path_x, &previous_path_y,
-//                end_path_s, end_path_d, &map_waypoints_s, &map_waypoints_x, &map_waypoints_y);
+//            for (auto v : vehicles) {
+//              if (v.possible_collision(car_s, lane)) {
+//                cerr << "Possible collision detected with car: " << v.id() << " in lane: " << v.get_lane() << " with car_s:" << car_s << endl;
+//                // TODO: take action if car is in our lane
+//                too_close = true;
 //
-            vector<vector<double> > gen_traj = ego.getTrajectory().generatePath(car_s, lane, ref_vel);
+//                // TODO: add feasibility of lane change, e.g. check if there is a car in the lane
+//                // check if there are gaps where we could go, if left lane is not possible, go right lane
+//                // these are the finite states.
+//                if (lane > 0) {
+//                  lane = 0;
+//                }
+//              }
+//            }
+//
+//            vector<vector<double> > gen_traj = ego.getTrajectory().generatePath(car_s, lane, ref_vel);
+
+            vector<vector<double> > gen_traj = ego.getBestTrajectory();
 
             // Store values for next simulator call.
             lane = ego.lane();
             egoState = ego.state();
+            ref_vel = ego.ref_vel();
 
 						// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 						json msgJson;

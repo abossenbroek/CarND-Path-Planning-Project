@@ -2,7 +2,10 @@
 #define _UTILITIES_HPP_
 
 #include <vector>
+#include <string>
 #include <math.h>
+
+#define MPH_TO_MS_CONSTANT 2.237
 
 using namespace std;
 
