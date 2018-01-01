@@ -2,15 +2,17 @@
 #define _EGO_HPP_
 
 #include <vector>
+#include <memory>
 
 #include "json.hpp"
 #include "vehicle.hpp"
+#include "trajectory.hpp"
 
 
 enum EgoState {
   KL, // Keep lane constant speed
-  KLD, // Keep lane decrease speed
-  KLA, // Keep lane increase speed
+//  KLD, // Keep lane decrease speed
+// KLA, // Keep lane increase speed
   PLCL, // Plan lane change left
   PLCR // Plane lane change right
 };
@@ -26,10 +28,17 @@ private:
   int _lane;
   EgoState _state;
   std::vector<Vehicle> _vehicles;
-
+  shared_ptr<Trajectory> _trajectory;
 
 public:
-  Ego(double x, double y, double s, double d, double yaw, double speed, int lane, EgoState state) :
+  Ego(double x, double y, double s, double d, double yaw, double speed,
+      int lane, EgoState state,
+      nlohmann::basic_json<>::value_type* prev_path_x,
+      nlohmann::basic_json<>::value_type* prev_path_y,
+      double end_path_s, double end_path_d,
+      vector<double>* map_waypoints_s,
+      vector<double>* map_waypoints_x,
+      vector<double>* map_waypoints_y) :
     _x(x),
     _y(y),
     _s(s),
@@ -39,6 +48,7 @@ public:
     _lane(lane),
     _state(state)
   {
+    _trajectory = make_shared<Trajectory>(Trajectory(this, prev_path_x, prev_path_y, end_path_s, end_path_d, map_waypoints_s, map_waypoints_x, map_waypoints_y));
   }
 
   ~Ego() {};
@@ -58,6 +68,7 @@ public:
   double speed() { return this->_speed; };
   double lane() { return this->_lane; };
   EgoState state() { return this->_state; };
+  Trajectory getTrajectory() { return *(this->_trajectory); };
 };
 
 #endif

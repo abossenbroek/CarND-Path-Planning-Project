@@ -5,7 +5,7 @@
 
 #include "json.hpp"
 
-#include "ego.hpp"
+class Ego;
 
 using namespace std;
 

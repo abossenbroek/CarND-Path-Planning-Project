@@ -65,7 +65,7 @@ int main() {
   // Have a reference velocity to target.
   double ref_vel = 49.5; // mph
 
-  EgoState egoState = EgoState::KLA;
+  EgoState egoState = EgoState::KL;
 
 	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane, &ref_vel, &egoState](
 			uWS::WebSocket <uWS::SERVER> ws, char *data, size_t length,
@@ -109,7 +109,10 @@ int main() {
             // How many reference points where not yet consumed by the simulator?
             int prev_size = previous_path_x.size();
 
-            Ego ego(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane, egoState);
+            Ego ego(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane,
+                egoState, &previous_path_x, &previous_path_y, end_path_s,
+                end_path_d, &map_waypoints_s, &map_waypoints_x,
+                &map_waypoints_y);
 
             //ego.addVehicles(sensor_fusion, prev_size);
             for (int i = 0; i < sensor_fusion.size(); ++i) {
@@ -141,10 +144,10 @@ int main() {
             }
 
             // Generate initial trajectory.
-            Trajectory traj(&ego, &previous_path_x, &previous_path_y,
-                end_path_s, end_path_d, &map_waypoints_s, &map_waypoints_x, &map_waypoints_y);
-
-            vector<vector<double> > gen_traj = traj.generatePath(car_s, lane, ref_vel);
+//            Trajectory traj(&ego, &previous_path_x, &previous_path_y,
+//                end_path_s, end_path_d, &map_waypoints_s, &map_waypoints_x, &map_waypoints_y);
+//
+            vector<vector<double> > gen_traj = ego.getTrajectory().generatePath(car_s, lane, ref_vel);
 
             // Store values for next simulator call.
             lane = ego.lane();
