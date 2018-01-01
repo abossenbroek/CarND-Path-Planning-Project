@@ -87,8 +87,8 @@ Trajectory::generatePath(double car_s, int lane, double ref_vel)
   vector<double> next_y_vals;
 
   for (int i = 0; i < _prev_path_x->size(); ++i) {
-    next_x_vals.push_back(_prev_path_x[i]);
-    next_y_vals.push_back(_prev_path_y[i]);
+    next_x_vals.push_back((*_prev_path_x)[i]);
+    next_y_vals.push_back((*_prev_path_y)[i]);
   }
 
   double target_x = 30.0;

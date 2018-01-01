@@ -109,7 +109,7 @@ int main() {
             // How many reference points where not yet consumed by the simulator?
             int prev_size = previous_path_x.size();
 
-            //Ego ego(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane, egoState);
+            Ego ego(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane, egoState);
 
             //ego.addVehicles(sensor_fusion, prev_size);
             for (int i = 0; i < sensor_fusion.size(); ++i) {
@@ -140,116 +140,20 @@ int main() {
               }
             }
 
-            // Create a list of widely spaced (x, y) waypoints. Which we will space evenly at 30m
-            // we will use these points to interpolate between with a single spline
-            vector<double> ptsx;
-            vector<double> ptsy;
-
-            // reference x, y, yaw states
-            // either we will reference the car starting point or the previous path end point
-            double ref_x = car_x;
-            double ref_y = car_y;
-            double ref_yaw = deg2rad(car_yaw);
-
-            // if previous size is almost empty, use the car as starting reference
-            if (prev_size < 2) {
-              double prev_car_x = car_x - cos(car_yaw);
-              double prev_car_y = car_y - sin(car_yaw);
-
-              // Use two points to make the path tangent to the previous path's end point.
-              ptsx.push_back(prev_car_x);
-              ptsx.push_back(car_x);
-
-              ptsy.push_back(prev_car_y);
-              ptsy.push_back(car_y);
-            } else {
-              ref_x = previous_path_x[prev_size - 1];
-              ref_y = previous_path_y[prev_size - 1];
-
-              double ref_x_prev = previous_path_x[prev_size - 2];
-              double ref_y_prev = previous_path_y[prev_size - 2];
-              ref_yaw = atan2(ref_y - ref_y_prev, ref_x - ref_x_prev);
-
-              ptsx.push_back(ref_x_prev);
-              ptsx.push_back(ref_x);
-
-              ptsy.push_back(ref_y_prev);
-              ptsy.push_back(ref_y);
-            }
-
-            vector<double> next_wp0 = getXY(car_s + 30.0, 2 + 4 * lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-            vector<double> next_wp1 = getXY(car_s + 60.0, 2 + 4 * lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-            vector<double> next_wp2 = getXY(car_s + 90.0, 2 + 4 * lane, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-
-            ptsx.push_back(next_wp0[0]);
-            ptsx.push_back(next_wp1[0]);
-            ptsx.push_back(next_wp2[0]);
-
-            ptsy.push_back(next_wp0[1]);
-            ptsy.push_back(next_wp1[1]);
-            ptsy.push_back(next_wp2[1]);
-
-            for (int i = 0; i < ptsx.size(); ++i) {
-              double shift_x = ptsx[i] - ref_x;
-              double shift_y = ptsy[i] - ref_y;
-
-              ptsx[i] = shift_x * cos(-ref_yaw) - shift_y * sin(-ref_yaw);
-              ptsy[i] = shift_x * sin(-ref_yaw) + shift_y * cos(-ref_yaw);
-            }
-
-            tk::spline spline;
-           spline.set_points(ptsx, ptsy);
-
-            vector<double> next_x_vals;
-						vector<double> next_y_vals;
-
-            for (int i = 0; i < previous_path_x.size(); ++i) {
-              next_x_vals.push_back(previous_path_x[i]);
-              next_y_vals.push_back(previous_path_y[i]);
-            }
-
-            double target_x = 30.0;
-            double target_y = spline(target_x);
-            double target_dist = sqrt(target_x * target_x + target_y * target_y);
-
-            double x_add_on = 0.0;
-
-            for (int i = 0; i <= 50 - previous_path_x.size(); ++i) {
-              double N = target_dist / (0.02 * ref_vel / 2.24);
-              double x_point = x_add_on + target_x / N;
-              double y_point = spline(x_point);
-
-              x_add_on = x_point;
-
-              double x_point_glob = x_point * cos(ref_yaw) - y_point * sin(ref_yaw) + ref_x;
-              double y_point_glob = x_point * sin(ref_yaw) + y_point * cos(ref_yaw) + ref_y;
-
-              next_x_vals.push_back(x_point_glob);
-              next_y_vals.push_back(y_point_glob);
-            }
-
             // Generate initial trajectory.
-//            Trajectory traj(&ego, &previous_path_x, &previous_path_y,
-//                end_path_s, end_path_d, &map_waypoints_s, &map_waypoints_x, &map_waypoints_y);
-//
-            //vector<vector<double> > gen_traj = traj.generatePath(car_s, lane, ref_vel);
+            Trajectory traj(&ego, &previous_path_x, &previous_path_y,
+                end_path_s, end_path_d, &map_waypoints_s, &map_waypoints_x, &map_waypoints_y);
+
+            vector<vector<double> > gen_traj = traj.generatePath(car_s, lane, ref_vel);
 
             // Store values for next simulator call.
-            //lane = ego.lane();
-            //egoState = ego.state();
+            lane = ego.lane();
+            egoState = ego.state();
 
-//            vector<double> next_x_vals;
-//            vector<double> next_y_vals;
-//
-//            for (int i = 0; i < gen_traj[0].size(); ++i) {
-//              next_x_vals.push_back(gen_traj[0][i]);
-//              next_y_vals.push_back(gen_traj[1][i]);
-//            }
-//
 						// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 						json msgJson;
-						msgJson["next_x"] = next_x_vals;
-						msgJson["next_y"] = next_y_vals;
+						msgJson["next_x"] = gen_traj[0];
+						msgJson["next_y"] = gen_traj[1];
 
 						auto msg = "42[\"control\"," + msgJson.dump() + "]";
 
