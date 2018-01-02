@@ -16,9 +16,7 @@ enum EgoState {
 //  KLD, // Keep lane decrease speed
 // KLA, // Keep lane increase speed
   PLCL, // Plan lane change left
-  PLCR, // Plane lane change right
-  LCL, // Lane change left
-  LCR // Lane change right
+  PLCR
 };
 
 class Ego {

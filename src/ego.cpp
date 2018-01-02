@@ -43,22 +43,12 @@ Ego::getBestTrajectory() {
 
     best_trajectory = _trajectory->generatePath(_s, _lane - 1, _ref_vel);
     _lane -= 1;
-    next_state = EgoState::LCL;
+    next_state = EgoState::KL;
   } else if (_state == EgoState::PLCR) {
     cerr << "In state PLCR" << endl;
 
     best_trajectory = _trajectory->generatePath(_s, _lane + 1, _ref_vel);
     _lane += 1;
-    next_state = EgoState::LCR;
-  } else if (_state == EgoState::LCL) {
-    cerr << "In state LCL" << endl;
-
-    best_trajectory = _trajectory->generatePath(_s, _lane - 1, _ref_vel);
-    next_state = EgoState::KL;
-  } else if (_state == EgoState::LCR) {
-    cerr << "In state LCR" << endl;
-
-    best_trajectory = _trajectory->generatePath(_s, _lane + 1, _ref_vel);
     next_state = EgoState::KL;
   }
 
