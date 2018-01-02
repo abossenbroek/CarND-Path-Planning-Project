@@ -1,6 +1,8 @@
 #include <vector>
 #include <math.h>
+#include <cmath>
 #include <stdlib.h>
+#include <iostream>
 #include <string>
 #include <limits>
 
@@ -157,7 +159,6 @@ getLane(double d) {
   return lane;
 }
 
-
 void
 push_circular(vector<double>& circular_buffer, double new_val)
 {
@@ -166,4 +167,25 @@ push_circular(vector<double>& circular_buffer, double new_val)
     circular_buffer[i] = circular_buffer[i + 1];
   }
   circular_buffer[i] = new_val;
+}
+
+
+double
+getMaxPermChangeRefSpeed(double current_speed, double ref_speed)
+{
+  double to_return;
+  if (current_speed >= ref_speed) {
+    // We are going to fast so we need to slow down
+    to_return = fmax(ref_speed - current_speed, -0.5);
+  } else {
+    // We can go faster so lets speed up
+    to_return = fmin(ref_speed - current_speed, 1);
+  }
+
+  cerr << "got current speed: " << current_speed << " and ref_speed: " << ref_speed << " determined to change " << to_return << " total will be" << to_return + current_speed << endl;
+
+  to_return += current_speed;
+
+
+  return to_return;
 }

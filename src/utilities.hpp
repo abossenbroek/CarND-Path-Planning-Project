@@ -23,4 +23,6 @@ int getLane(double d);
 
 void push_circular(vector<double>& circular_buffer, double new_val);
 
+double getMaxPermChangeRefSpeed(double current_speed, double ref_speed);
+
 #endif
