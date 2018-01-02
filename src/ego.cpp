@@ -54,13 +54,14 @@ Ego::getBestTrajectory() {
      */
     state_costs.push_back(make_tuple(EgoState::KL, costKL(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
     state_costs.push_back(make_tuple(EgoState::KLA, costKLA(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
+    state_costs.push_back(make_tuple(EgoState::KLD, costKLD(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
     state_costs.push_back(make_tuple(EgoState::PLCL, costPLCL(), _trajectory->generatePath(_s, _lane, PLCL_speed), PLCL_speed));
     state_costs.push_back(make_tuple(EgoState::PLCR, costPLCR(), _trajectory->generatePath(_s, _lane, PLCR_speed), PLCR_speed));
 
 
     // Iterate through cost options
     for (int i = 0; i < state_costs.size(); ++i ) {
-      cerr << "found cost " << get<1>(state_costs[i]) << endl;
+      cerr << "for state: " << get<0>(state_costs[i]) << " found cost " << get<1>(state_costs[i]) << endl;
       if (lowest_cost > get<1>(state_costs[i])) {
         next_state = get<0>(state_costs[i]);
         lowest_cost = get<1>(state_costs[i]);
@@ -88,6 +89,12 @@ Ego::getBestTrajectory() {
     best_trajectory = _trajectory->generatePath(_s, _lane, _ref_vel + 1);
     next_state = EgoState::KL;
     best_ref_vel = _ref_vel + 1;
+  } else if (_state == EgoState::KLD) {
+    cerr << "In state KLD" << endl;
+
+    best_trajectory = _trajectory->generatePath(_s, _lane, _ref_vel - 1);
+    next_state = EgoState::KL;
+    best_ref_vel = _ref_vel - 1;
   }
 
 
@@ -120,7 +127,7 @@ double
 Ego::costPLCL() {
   double max_cost = exp(-30);
 
-  cerr << "PLCL: consider lane change to: " << getLane(_d) - 1 << endl;
+  cerr << "PLCL: consider lane change to: " << getLane(_d) - 1 << " given _d:" << _d << endl;
   if ((getLane(_d) - 1) < 0) {
     cerr << "PLCL: returning max cost" << endl;
     return MAX_COST;
@@ -146,7 +153,7 @@ double
 Ego::costPLCR() {
   double max_cost = exp(-30);
 
-  cerr << "PLCR: consider lane change to: " << getLane(_d) + 1 << endl;
+  cerr << "PLCR: consider lane change to: " << getLane(_d) + 1 << " given _d:" << _d << endl;
   // Ensure that the car doesn't leave the highway.
   if ((getLane(_d) + 1) > 3) {
     cerr << "PLCR: returning max cost" << endl;
@@ -179,10 +186,35 @@ Ego::costKLA()
   double max_cost = exp(-40);
 
   for (auto& v : _vehicles) {
-    if (v.possible_collision(_s, _lane - 1, _speed + 1)) {
+    if (v.possible_collision(_s, _lane, _speed + 1)) {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
       double current_cost = exp(-(v.future_s() - _s));
+      if (current_cost > max_cost) {
+        max_cost = current_cost;
+      }
+    }
+  }
+
+  return max_cost;
+}
+
+double
+Ego::costKLD()
+{
+  if ((_speed - 1) < 0 || (_ref_vel - 1) < 0) {
+    cerr << "costKLD found that we would reach stand still" << endl;
+    return MAX_COST;
+  }
+
+  double max_cost = exp(-40);
+
+  for (auto& v : _vehicles) {
+    if (v.possible_collision(_s, _lane, _speed - 1)) {
+      // Decrease cost for cars that are closer by since it should make this
+      // option more interesting.
+      // TODO: add speed to cost estimation.
+      double current_cost = 1. - exp(v.future_s() / (_s - v.future_s() - 0.001));
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }
@@ -221,6 +253,9 @@ Ego::getSpeedClosestBehind(int lane, bool& found_car) {
 void
 Ego::set_sd_derivatives(vector<double>& old_d, vector<double>& old_s)
 {
+  // TODO: add division by amount of steps consumed by simulation
+  // TODO: add specification of second order derivative in terms of first order
+  // derivative for stability
   _s_dot = old_s[2] - old_s[1];
   _s_dot_dot = old_s[2] - 2 * old_s[1] + old_s[0];
 

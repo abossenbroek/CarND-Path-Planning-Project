@@ -13,8 +13,8 @@
 
 enum EgoState {
   KL, // Keep lane constant speed
-//  KLD, // Keep lane decrease speed
   KLA, // Keep lane increase speed
+  KLD, // Keep lane decrease speed
   PLCL, // Plan lane change left
   PLCR
 };
@@ -39,6 +39,7 @@ private:
 
   double costKL();
   double costKLA();
+  double costKLD();
   double costPLCL();
   double costPLCR();
 
@@ -70,7 +71,12 @@ public:
     }
 
     cerr << "********************************************************************************" << endl;
-    cerr << "ref_vel: " << ref_vel << endl;
+    cerr << "ref_vel:    " << ref_vel << endl;
+    cerr << "speed:      " << speed << endl;
+    cerr << "_s:         " << _s << endl;
+    cerr << "lane:       " << lane << endl;
+    cerr << "getLane:    " << getLane(d) << endl;
+    cerr << "_d:         " << _d << endl;
     set_sd_derivatives(old_d, old_s);
   }
 

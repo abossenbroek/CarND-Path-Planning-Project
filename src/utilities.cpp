@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string>
+#include <limits>
 
 #include "utilities.hpp"
 
@@ -147,7 +148,7 @@ getXY(double s, double d, const vector<double> &maps_s, const vector<double> &ma
 int
 getLane(double d) {
   int lane = -1;
-  double d_thresh;
+  double d_thresh = numeric_limits<double>::min();
   while (d_thresh < d) {
     lane++;
     d_thresh = 4 * lane + 4;
