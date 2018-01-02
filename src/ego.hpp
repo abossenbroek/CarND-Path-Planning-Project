@@ -52,8 +52,9 @@ public:
       vector<double>* map_waypoints_s,
       vector<double>* map_waypoints_x,
       vector<double>* map_waypoints_y,
-      vector<double>& old_d,
-      vector<double>& old_s) :
+      vector<double>& d_prev,
+      vector<double>& s_prev,
+      int steps_prev) :
     _x(x),
     _y(y),
     _s(s),
@@ -65,8 +66,8 @@ public:
     _state(state)
   {
     _trajectory = make_shared<Trajectory>(Trajectory(this, prev_path_x, prev_path_y, end_path_s, end_path_d, map_waypoints_s, map_waypoints_x, map_waypoints_y));
-    int prev_size = prev_path_x->size();
-    if (prev_size > 0) {
+    int s_prev_size = prev_path_x->size();
+    if (s_prev_size > 0) {
       _s = end_path_s;
     }
 
@@ -77,7 +78,9 @@ public:
     cerr << "lane:       " << lane << endl;
     cerr << "getLane:    " << getLane(d) << endl;
     cerr << "_d:         " << _d << endl;
-    set_sd_derivatives(old_d, old_s);
+    vector<int> time_steps = {50 - s_prev_size, steps_prev};
+
+    set_sd_derivatives(d_prev, s_prev, time_steps);
   }
 
   ~Ego() {};
@@ -102,7 +105,7 @@ public:
   vector<vector<double> > getBestTrajectory();
 
   double getSpeedClosestBehind(int lane, bool& found_car);
-  void set_sd_derivatives(vector<double>& old_d, vector<double>& old_s);
+  void set_sd_derivatives(const vector<double>& d_prev, const vector<double>& s_prev, const vector<int>& steps);
 };
 
 #endif

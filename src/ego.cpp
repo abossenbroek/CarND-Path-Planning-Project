@@ -23,9 +23,9 @@ using namespace std;
 vector<vector<double> >
 Ego::getBestTrajectory() {
 
-  EgoState next_state;
+  EgoState next_state = EgoState::KL;
   vector<vector<double> > best_trajectory;
-  double best_ref_vel;
+  double best_ref_vel = _ref_vel;
 
   if (_state == EgoState::KL) {
     cerr << "In state KL in lane:" << _lane << " with s:" << _s << "speed " << _speed << endl;
@@ -92,9 +92,9 @@ Ego::getBestTrajectory() {
   } else if (_state == EgoState::KLD) {
     cerr << "In state KLD" << endl;
 
-    best_trajectory = _trajectory->generatePath(_s, _lane, _ref_vel - 1);
+    best_trajectory = _trajectory->generatePath(_s, _lane, _ref_vel - 0.5);
     next_state = EgoState::KL;
-    best_ref_vel = _ref_vel - 1;
+    best_ref_vel = _ref_vel - 0.5;
   }
 
 
@@ -128,7 +128,7 @@ Ego::costPLCL() {
   double max_cost = exp(-30);
 
   cerr << "PLCL: consider lane change to: " << getLane(_d) - 1 << " given _d:" << _d << endl;
-  if ((getLane(_d) - 1) < 0) {
+  if ((getLane(_d) - 1) < 0 || (_lane - 1) < 0) {
     cerr << "PLCL: returning max cost" << endl;
     return MAX_COST;
   }
@@ -155,7 +155,7 @@ Ego::costPLCR() {
 
   cerr << "PLCR: consider lane change to: " << getLane(_d) + 1 << " given _d:" << _d << endl;
   // Ensure that the car doesn't leave the highway.
-  if ((getLane(_d) + 1) > 3) {
+  if ((getLane(_d) + 1) > 3 || (_lane + 1) > 3) {
     cerr << "PLCR: returning max cost" << endl;
     return MAX_COST;
   }
@@ -202,19 +202,19 @@ Ego::costKLA()
 double
 Ego::costKLD()
 {
-  if ((_speed - 1) < 0 || (_ref_vel - 1) < 0) {
+  if ((_speed - 0.5) < 0 || (_ref_vel - 0.5) < 0) {
     cerr << "costKLD found that we would reach stand still" << endl;
     return MAX_COST;
   }
 
-  double max_cost = exp(-40);
+  double max_cost = exp(-20);
 
   for (auto& v : _vehicles) {
     if (v.possible_collision(_s, _lane, _speed - 1)) {
       // Decrease cost for cars that are closer by since it should make this
       // option more interesting.
       // TODO: add speed to cost estimation.
-      double current_cost = 1. - exp(v.future_s() / (_s - v.future_s() - 0.001));
+      double current_cost = 1. - 0.9 * exp(v.future_s() / (_s - v.future_s() - 0.001));
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }
@@ -251,16 +251,16 @@ Ego::getSpeedClosestBehind(int lane, bool& found_car) {
 
 
 void
-Ego::set_sd_derivatives(vector<double>& old_d, vector<double>& old_s)
+Ego::set_sd_derivatives(const vector<double>& d_prev, const vector<double>& s_prev, const vector<int>& steps)
 {
   // TODO: add division by amount of steps consumed by simulation
   // TODO: add specification of second order derivative in terms of first order
   // derivative for stability
-  _s_dot = old_s[2] - old_s[1];
-  _s_dot_dot = old_s[2] - 2 * old_s[1] + old_s[0];
+  _s_dot = (s_prev[2] - s_prev[1]) / (max(steps[0], 1) * 0.02);
+  _s_dot_dot = (s_prev[2] - 2 * s_prev[1] + s_prev[0]) / (max(steps[0] * steps[1], 1) * 0.02 * 0.02);
 
-  _d_dot = old_d[2] - old_d[1];
-  _d_dot_dot = old_d[2] - 2 * old_d[1] + old_d[0];
+  _d_dot = d_prev[2] - d_prev[1] / (max(steps[0], 1) * 0.02);
+  _d_dot_dot = d_prev[2] - 2 * d_prev[1] + d_prev[0] / (max(steps[0] * steps[1], 1) * 0.02 * 0.02);
 
   cerr << "s_dot: " << _s_dot << " s_dot_dot:" << _s_dot_dot << " d_dot:" << _d_dot << " d_dot_dot:" << _d_dot_dot << endl;
 }

@@ -33,6 +33,7 @@ int main() {
 	vector<double> map_waypoints_dy;
   vector<double> old_d = {0.0, 0.0, 0.0};
   vector<double> old_s = {0.0, 0.0, 0.0};
+  int points_visited_prev = 0;
 
 	// Waypoint map to read from
 	string map_file_ = "../data/highway_map.csv";
@@ -70,7 +71,7 @@ int main() {
 
   EgoState egoState = EgoState::KL;
 
-	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane, &ref_vel, &egoState, &old_d, &old_s](
+	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane, &ref_vel, &egoState, &old_d, &old_s, &points_visited_prev](
 			uWS::WebSocket <uWS::SERVER> ws, char *data, size_t length,
 			uWS::OpCode opCode) {
 			// "42" at the start of the message means there's a websocket message event.
@@ -112,13 +113,17 @@ int main() {
             // How many reference points where not yet consumed by the simulator?
             int prev_size = previous_path_x.size();
 
+            cerr << "################################################################################" << endl;
+            cerr << "points visited: " << 50 - prev_size << " in time: " << (0.02 * (50 - prev_size)) << endl;
+            //old_points_visited =
+
             push_circular(old_d, car_d);
             push_circular(old_s, car_s);
 
             Ego ego(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane,
                 ref_vel, egoState, &previous_path_x, &previous_path_y, end_path_s,
                 end_path_d, &map_waypoints_s, &map_waypoints_x,
-                &map_waypoints_y, old_d, old_s);
+                &map_waypoints_y, old_d, old_s, points_visited_prev);
             ego.addVehicles(sensor_fusion, prev_size);
 
             vector<vector<double> > gen_traj = ego.getBestTrajectory();
@@ -128,6 +133,7 @@ int main() {
             egoState = ego.state();
             cerr << "egoState: " << egoState << endl;
             ref_vel = ego.ref_vel();
+            points_visited_prev = 50 - prev_size;
 
 						// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 						json msgJson;
