@@ -7,8 +7,9 @@
 #include "json.hpp"
 #include "vehicle.hpp"
 #include "trajectory.hpp"
+#include "utilities.hpp"
 
-#define MAX_COST 9999
+#define MAX_COST 1
 
 enum EgoState {
   KL, // Keep lane constant speed
@@ -63,6 +64,7 @@ public:
       _s = end_path_s;
     }
 
+    cerr << "********************************************************************************" << endl;
   }
 
   ~Ego() {};

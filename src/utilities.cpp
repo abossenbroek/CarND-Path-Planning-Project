@@ -144,3 +144,14 @@ getXY(double s, double d, const vector<double> &maps_s, const vector<double> &ma
 
 }
 
+int
+getLane(double d) {
+  int lane = -1;
+  double d_thresh;
+  while (d_thresh < d) {
+    lane++;
+    d_thresh = 4 * lane + 4;
+  }
+
+  return lane;
+}

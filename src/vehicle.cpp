@@ -29,7 +29,7 @@ Vehicle::future_s()
 double
 Vehicle::get_lane()
 {
-  return 0.25 * this->_d - 2;
+  return getLane(_d);
 }
 
 bool
@@ -49,7 +49,7 @@ Vehicle::possible_collision(double s, int lane, double speed)
 {
   // We want to detect at least 10 seconds at the speed we are as collision
   // detection
-  double collision_distance = speed / MPH_TO_MS_CONSTANT * 10.0;
+  double collision_distance = speed / MPH_TO_MS_CONSTANT * 4.0;
   return this->in_front(s) && (this->future_s() - s) < collision_distance && this->in_lane(lane);
 }
 

@@ -42,11 +42,13 @@ Ego::getBestTrajectory() {
     cerr << "In state PLCL" << endl;
 
     best_trajectory = _trajectory->generatePath(_s, _lane - 1, _ref_vel);
+    _lane -= 1;
     next_state = EgoState::LCL;
   } else if (_state == EgoState::PLCR) {
     cerr << "In state PLCR" << endl;
 
     best_trajectory = _trajectory->generatePath(_s, _lane + 1, _ref_vel);
+    _lane += 1;
     next_state = EgoState::LCR;
   } else if (_state == EgoState::LCL) {
     cerr << "In state LCL" << endl;
@@ -72,12 +74,10 @@ Ego::costKL() {
     if (v.possible_collision(_s, _lane, _speed)) {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
-      double speed_penalty = 1.0 - 49.5 / (v.speed() - _speed);
-      double current_cost = exp(-speed_penalty * (v.future_s() - _s));
+      double current_cost = exp(-(v.future_s() - _s));
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }
-      cerr << "for KL: Possible collision detected" << endl;
     }
   }
 
@@ -90,18 +90,19 @@ double
 Ego::costPLCL() {
   double max_cost = exp(-30);
 
+  if (_lane - 1 < 0) {
+    return MAX_COST;
+  }
+
   for (auto v : _vehicles) {
     if (v.possible_collision(_s, _lane - 1, _speed)) {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
-      double speed_penalty = 1.0 - 49.5 / (v.speed() - _speed);
-      double current_cost = exp(-speed_penalty * (v.future_s() - _s));
+      double current_cost = exp(-(v.future_s() - _s));
 
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }
-
-      cerr << "for PLCL: Possible collision detected" << endl;
     }
   }
 
@@ -113,23 +114,22 @@ double
 Ego::costPLCR() {
   double max_cost = exp(-30);
 
+  // Ensure that the car doesn't leave the highway.
+  if (_lane + 1 > 3) {
+    return MAX_COST;
+  }
+
   for (auto v : _vehicles) {
     if (v.possible_collision(_s, _lane + 1, _speed)) {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
-      // bad: 1 - 49.5 / -30 = 1 + 5 / 3 = 8 / 3
-      // good:  1 - 49.5 / 30 = 1 -5 /3 = 2 / 3
-
-      double speed_penalty = 1.0 - 49.5 / (v.speed() - _speed);
-      double current_cost = exp(-speed_penalty * (v.future_s() - _s));
+      double current_cost = exp(-(v.future_s() - _s));
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }
-      cerr << "for PLCR: Possible collision detected" << endl;
     }
   }
 
   cerr << "cost for PLCR in lane " << _lane + 1 << " with cost " << max_cost * 3. << endl;
-
   return max_cost * 3.0;
 }
