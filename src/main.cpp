@@ -121,36 +121,6 @@ int main() {
                 &map_waypoints_y, old_d, old_s);
             ego.addVehicles(sensor_fusion, prev_size);
 
-            //ego.addVehicles(sensor_fusion, prev_size);
-            for (int i = 0; i < sensor_fusion.size(); ++i) {
-              vehicles.push_back(Vehicle(sensor_fusion[i], prev_size));
-            }
-
-            if (prev_size > 0) {
-              car_s = end_path_s;
-            }
-
-            bool too_close = false;
-
-            // TODO: find ref_v to use
-//            for (auto v : vehicles) {
-//              if (v.possible_collision(car_s, lane)) {
-//                cerr << "Possible collision detected with car: " << v.id() << " in lane: " << v.get_lane() << " with car_s:" << car_s << endl;
-//                // TODO: take action if car is in our lane
-//                too_close = true;
-//
-//                // TODO: add feasibility of lane change, e.g. check if there is a car in the lane
-//                // check if there are gaps where we could go, if left lane is not possible, go right lane
-//                // these are the finite states.
-//                if (lane > 0) {
-//                  lane = 0;
-//                }
-//              }
-//            }
-//
-//            vector<vector<double> > gen_traj = ego.getTrajectory().generatePath(car_s, lane, ref_vel);
-
-
             vector<vector<double> > gen_traj = ego.getBestTrajectory();
 
             // Store values for next simulator call.
