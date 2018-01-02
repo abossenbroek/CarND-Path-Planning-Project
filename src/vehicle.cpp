@@ -47,7 +47,6 @@ Vehicle::in_front(double s)
 bool
 Vehicle::possible_collision(double s, int lane, double speed)
 {
-  double collision_distance = speed / MPH_TO_MS_CONSTANT * 4.0;
   return in_front(s) && in_range(s, lane, speed);
 }
 

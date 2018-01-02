@@ -26,6 +26,9 @@ Ego::getBestTrajectory() {
   EgoState next_state = EgoState::KL;
   vector<vector<double> > best_trajectory;
   double best_ref_vel = _ref_vel;
+  vector<double> lane_speeds = {0, 0, 0};
+  // Get the speed for each lane
+  get_lane_speed(lane_speeds);
 
   if (_state == EgoState::KL) {
     cerr << "In state KL in lane:" << _lane << " with s:" << _s << "speed " << _speed << endl;
@@ -155,7 +158,7 @@ Ego::costPLCR() {
 
   cerr << "PLCR: consider lane change to: " << getLane(_d) + 1 << " given _d:" << _d << endl;
   // Ensure that the car doesn't leave the highway.
-  if ((getLane(_d) + 1) > 3 || (_lane + 1) > 3) {
+  if ((getLane(_d) + 1) > 2 || (_lane + 1) > 2) {
     cerr << "PLCR: returning max cost" << endl;
     return MAX_COST;
   }
@@ -263,4 +266,20 @@ Ego::set_sd_derivatives(const vector<double>& d_prev, const vector<double>& s_pr
   _d_dot_dot = d_prev[2] - 2 * d_prev[1] + d_prev[0] / (max(steps[0] * steps[1], 1) * 0.02 * 0.02);
 
   cerr << "s_dot: " << _s_dot << " s_dot_dot:" << _s_dot_dot << " d_dot:" << _d_dot << " d_dot_dot:" << _d_dot_dot << endl;
+}
+
+void
+Ego::get_lane_speed(vector<double>& lane_speeds) {
+  vector<int> cars_in_lane = {0, 0, 0};
+  lane_speeds = {49.5, 49.5, 49.5};
+
+  for (auto& v : _vehicles) {
+    int lane = v.get_lane();
+
+    if (lane >= 0 && lane <= 3 && v.in_front(_s)) {
+      lane_speeds[lane] = ((lane_speeds[lane] * cars_in_lane[lane]) +
+          v.speed()) / (cars_in_lane[lane] + 1);
+      cars_in_lane[lane]++;
+    }
+  }
 }

@@ -106,6 +106,9 @@ public:
 
   double getSpeedClosestBehind(int lane, bool& found_car);
   void set_sd_derivatives(const vector<double>& d_prev, const vector<double>& s_prev, const vector<int>& steps);
+
+
+  void get_lane_speed(vector<double>& lane_speeds);
 };
 
 #endif
