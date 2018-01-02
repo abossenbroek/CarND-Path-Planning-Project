@@ -28,6 +28,7 @@ public:
   bool in_lane(int lane);
   bool in_front(double s);
   bool possible_collision(double s, int lane, double speed);
+  bool in_range(double s, int lane, double speed);
 
   int id() { return this->_id; };
   double x() { return this->_x; };

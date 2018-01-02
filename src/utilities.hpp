@@ -21,4 +21,6 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 
 int getLane(double d);
 
+void push_circular(vector<double>& circular_buffer, double new_val);
+
 #endif

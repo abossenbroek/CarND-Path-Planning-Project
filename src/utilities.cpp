@@ -155,3 +155,14 @@ getLane(double d) {
 
   return lane;
 }
+
+
+void
+push_circular(vector<double>& circular_buffer, double new_val)
+{
+  int i = 0;
+  for (i = 0; i < 2; ++i) {
+    circular_buffer[i] = circular_buffer[i + 1];
+  }
+  circular_buffer[i] = new_val;
+}

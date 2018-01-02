@@ -31,6 +31,8 @@ int main() {
 	vector<double> map_waypoints_s;
 	vector<double> map_waypoints_dx;
 	vector<double> map_waypoints_dy;
+  vector<double> old_d = {0.0, 0.0, 0.0};
+  vector<double> old_s = {0.0, 0.0, 0.0};
 
 	// Waypoint map to read from
 	string map_file_ = "../data/highway_map.csv";
@@ -63,11 +65,12 @@ int main() {
   int lane = 1;
 
   // Have a reference velocity to target.
-  double ref_vel = 49.5; // mph
+  //double ref_vel = 49.5; // mph
+  double ref_vel = 20.5; // mph
 
   EgoState egoState = EgoState::KL;
 
-	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane, &ref_vel, &egoState](
+	h.onMessage([&map_waypoints_x, &map_waypoints_y, &map_waypoints_s, &map_waypoints_dx, &map_waypoints_dy, &lane, &ref_vel, &egoState, &old_d, &old_s](
 			uWS::WebSocket <uWS::SERVER> ws, char *data, size_t length,
 			uWS::OpCode opCode) {
 			// "42" at the start of the message means there's a websocket message event.
@@ -109,18 +112,19 @@ int main() {
             // How many reference points where not yet consumed by the simulator?
             int prev_size = previous_path_x.size();
 
+            push_circular(old_d, car_d);
+            push_circular(old_s, car_s);
+
             Ego ego(car_x, car_y, car_s, car_d, car_yaw, car_speed, lane,
                 ref_vel, egoState, &previous_path_x, &previous_path_y, end_path_s,
                 end_path_d, &map_waypoints_s, &map_waypoints_x,
-                &map_waypoints_y);
+                &map_waypoints_y, old_d, old_s);
             ego.addVehicles(sensor_fusion, prev_size);
 
             //ego.addVehicles(sensor_fusion, prev_size);
             for (int i = 0; i < sensor_fusion.size(); ++i) {
               vehicles.push_back(Vehicle(sensor_fusion[i], prev_size));
             }
-            // Have a reference velocity to target,
-            double ref_vel = 49.5;
 
             if (prev_size > 0) {
               car_s = end_path_s;
@@ -146,11 +150,13 @@ int main() {
 //
 //            vector<vector<double> > gen_traj = ego.getTrajectory().generatePath(car_s, lane, ref_vel);
 
+
             vector<vector<double> > gen_traj = ego.getBestTrajectory();
 
             // Store values for next simulator call.
             lane = ego.lane();
             egoState = ego.state();
+            cerr << "egoState: " << egoState << endl;
             ref_vel = ego.ref_vel();
 
 						// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds

@@ -111,7 +111,6 @@ Trajectory::generatePath(double car_s, int lane, double ref_vel)
     next_y_vals.push_back(y_point_glob);
   }
 
-
   return {next_x_vals, next_y_vals};
 }
 

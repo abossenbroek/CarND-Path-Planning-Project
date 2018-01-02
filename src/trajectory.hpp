@@ -34,8 +34,6 @@ public:
   ~Trajectory() {};
 
   vector<vector<double> > generatePath(double car_s, int lane, double ref_vel);
-
-
 };
 
 #endif

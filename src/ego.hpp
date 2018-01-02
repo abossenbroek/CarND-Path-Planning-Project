@@ -14,7 +14,7 @@
 enum EgoState {
   KL, // Keep lane constant speed
 //  KLD, // Keep lane decrease speed
-// KLA, // Keep lane increase speed
+  KLA, // Keep lane increase speed
   PLCL, // Plan lane change left
   PLCR
 };
@@ -32,8 +32,13 @@ private:
   EgoState _state;
   std::vector<Vehicle> _vehicles;
   shared_ptr<Trajectory> _trajectory;
+  double _s_dot;
+  double _s_dot_dot;
+  double _d_dot;
+  double _d_dot_dot;
 
   double costKL();
+  double costKLA();
   double costPLCL();
   double costPLCR();
 
@@ -45,7 +50,9 @@ public:
       double end_path_s, double end_path_d,
       vector<double>* map_waypoints_s,
       vector<double>* map_waypoints_x,
-      vector<double>* map_waypoints_y) :
+      vector<double>* map_waypoints_y,
+      vector<double>& old_d,
+      vector<double>& old_s) :
     _x(x),
     _y(y),
     _s(s),
@@ -63,6 +70,8 @@ public:
     }
 
     cerr << "********************************************************************************" << endl;
+    cerr << "ref_vel: " << ref_vel << endl;
+    set_sd_derivatives(old_d, old_s);
   }
 
   ~Ego() {};
@@ -85,6 +94,9 @@ public:
   EgoState state() { return this->_state; };
   Trajectory getTrajectory() { return *(this->_trajectory); };
   vector<vector<double> > getBestTrajectory();
+
+  double getSpeedClosestBehind(int lane, bool& found_car);
+  void set_sd_derivatives(vector<double>& old_d, vector<double>& old_s);
 };
 
 #endif
