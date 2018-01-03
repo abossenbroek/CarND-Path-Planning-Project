@@ -1,4 +1,5 @@
 #include <tuple>
+#include <cmath>
 #include <vector>
 #include <iostream>
 #include <algorithm>
@@ -36,15 +37,15 @@ Ego::getBestTrajectory() {
   if (_state == EgoState::KL) {
     cerr << "In state KL in lane:" << _lane << " with s:" << _s << "speed " << _speed << endl;
     vector< tuple<EgoState, double, vector<vector<double> >, double > > state_costs;
-    double lowest_cost = MAX_COST;
+    double lowest_cost = MAX_COST + 0.1;
 
     /* TODO: to set a smoother acceleration and jerk. Currently generatePath
      * takes only a single _s and single _d. This should be changed to 5-th
      * order polynomial. We'll also have to change the _ref_vel accordingly.
      */
+    state_costs.push_back(make_tuple(EgoState::KLD, costKLD(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
     state_costs.push_back(make_tuple(EgoState::KL, costKL(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
     state_costs.push_back(make_tuple(EgoState::KLA, costKLA(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
-    state_costs.push_back(make_tuple(EgoState::KLD, costKLD(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
     state_costs.push_back(make_tuple(EgoState::PLCL, costPLCL(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
     state_costs.push_back(make_tuple(EgoState::PLCR, costPLCR(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
 
@@ -94,15 +95,16 @@ Ego::getBestTrajectory() {
 
 double
 Ego::costKL() {
-  double max_cost = exp(-20);
+  double max_cost = exp(-5);
 
   for (auto& v : _vehicles) {
-    if (v.possible_collision(_s, _lane, _speed - 1)) {
+    if (v.possible_collision(_s, _lane, _speed)) {
       // Decrease cost for cars that are closer by since it should make this
       // option more interesting.
       // TODO: add speed to cost estimation.
-      double current_cost = 1. - 0.9 * exp(v.future_s() / (_s - v.future_s() - 0.001));
+      double current_cost = 1. - 0.9 * exp(getCollisionDistance(_speed) / pow(_s - v.future_s(), 1.01));
       if (current_cost > max_cost) {
+        cerr << "cost for KL, found future_s:" << v.future_s() << " with _s: " << _s <<endl;
         max_cost = current_cost;
       }
     }
@@ -115,11 +117,15 @@ Ego::costKL() {
 
 double
 Ego::costPLCL() {
-  double max_cost = exp(-30);
+  double max_cost = exp(-5.1);
 
   cerr << "PLCL: consider lane change to: " << getLane(_d) - 1 << " given _d:" << _d << endl;
   if ((getLane(_d) - 1) < 0 || (_lane - 1) < 0) {
     cerr << "PLCL: returning max cost" << endl;
+    return MAX_COST;
+  }
+  if (getLane(_d) != _lane) {
+    cerr << "PLCL: returning max cost because lane changed is not finished" << endl;
     return MAX_COST;
   }
 
@@ -127,7 +133,8 @@ Ego::costPLCL() {
     if (v.in_range(_s, _lane - 1, _speed)) {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
-      double current_cost = exp(-(v.future_s() - _s));
+      //double current_cost = exp(-fabs(v.future_s() - _s));
+      double current_cost = 1. - exp(getCollisionDistance(_speed) / pow(fabs(_s - v.future_s()), 0.98));
 
       if (current_cost > max_cost) {
         max_cost = current_cost;
@@ -136,13 +143,13 @@ Ego::costPLCL() {
   }
 
   cerr << "cost for PLCL in lane " << _lane - 1 << " with cost " << max_cost * 2 << endl;
-  return max_cost * 2.0;
+  return max_cost;
 }
 
 // TODO: add collision detection for cars behind when shifting lanes!
 double
 Ego::costPLCR() {
-  double max_cost = exp(-30);
+  double max_cost = exp(-5.3);
 
   cerr << "PLCR: consider lane change to: " << getLane(_d) + 1 << " given _d:" << _d << endl;
   // Ensure that the car doesn't leave the highway.
@@ -151,19 +158,25 @@ Ego::costPLCR() {
     return MAX_COST;
   }
 
+  if (getLane(_d) != _lane) {
+    cerr << "PLCR: returning max cost because lane changed is not finished" << endl;
+    return MAX_COST;
+  }
+
   for (auto& v : _vehicles) {
     if (v.in_range(_s, _lane + 1, _speed)) {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
-      double current_cost = exp(-(v.future_s() - _s));
+      //double current_cost = exp(-fabs(v.future_s() - _s));
+      double current_cost = 1. - exp(getCollisionDistance(_speed) / pow(fabs(_s - v.future_s()), 0.98));
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }
     }
   }
 
-  cerr << "cost for PLCR in lane " << _lane + 1 << " with cost " << max_cost * 3. << endl;
-  return max_cost * 3.0;
+  cerr << "cost for PLCR in lane " << _lane + 1 << " with cost " << max_cost << endl;
+  return max_cost;
 }
 
 double
@@ -205,7 +218,7 @@ Ego::costKLD()
       // Decrease cost for cars that are closer by since it should make this
       // option more interesting.
       // TODO: add speed to cost estimation.
-      double current_cost = 1. - 0.9 * exp(v.future_s() / (_s - v.future_s() - 0.5));
+      double current_cost = 1. - 0.9 * exp(getCollisionDistance(_speed) / pow(_s - v.future_s(), 1.02));
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }

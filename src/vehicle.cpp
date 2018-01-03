@@ -54,6 +54,5 @@ bool
 Vehicle::in_range(double s, int lane, double speed) {
   // We want to detect at least 4 seconds at the speed we are as collision
   // detection
-  double collision_distance = speed / MPH_TO_MS_CONSTANT * 4.0;
-  return fabs(future_s() - s) < collision_distance && in_lane(lane);
+  return fabs(future_s() - s) < getCollisionDistance(speed) && in_lane(lane);
 }

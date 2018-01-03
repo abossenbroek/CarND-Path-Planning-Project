@@ -18,11 +18,9 @@ int ClosestWaypoint(double x, double y, const vector<double> &maps_x, const vect
 int NextWaypoint(double x, double y, double theta, const vector<double> &maps_x, const vector<double> &maps_y);
 vector<double> getFrenet(double x, double y, double theta, const vector<double> &maps_x, const vector<double> &maps_y);
 vector<double> getXY(double s, double d, const vector<double> &maps_s, const vector<double> &maps_x, const vector<double> &maps_y);
-
 int getLane(double d);
-
 void push_circular(vector<double>& circular_buffer, double new_val);
-
 double getMaxPermChangeRefSpeed(double current_speed, double ref_speed);
+double getCollisionDistance(double speed);
 
 #endif

@@ -179,7 +179,7 @@ getMaxPermChangeRefSpeed(double current_speed, double ref_speed)
     to_return = fmax(ref_speed - current_speed, -0.5);
   } else {
     // We can go faster so lets speed up
-    to_return = fmin(ref_speed - current_speed, 1);
+    to_return = fmin(ref_speed - current_speed, 0.5);
   }
 
   cerr << "got current speed: " << current_speed << " and ref_speed: " << ref_speed << " determined to change " << to_return << " total will be" << to_return + current_speed << endl;
@@ -188,4 +188,10 @@ getMaxPermChangeRefSpeed(double current_speed, double ref_speed)
 
 
   return to_return;
+}
+
+double
+getCollisionDistance(double speed)
+{
+  return speed / MPH_TO_MS_CONSTANT * 2.0;
 }
