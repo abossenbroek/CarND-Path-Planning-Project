@@ -102,7 +102,7 @@ Ego::costKL() {
       // Decrease cost for cars that are closer by since it should make this
       // option more interesting.
       // TODO: add speed to cost estimation.
-      double current_cost = 1. - 0.9 * exp(getCollisionDistance(_speed) / pow(_s - v.future_s(), 1.01));
+      double current_cost = 1. - exp(getCollisionDistance(_speed) / (_s - v.future_s()));
       if (current_cost > max_cost) {
         cerr << "cost for KL, found future_s:" << v.future_s() << " with _s: " << _s <<endl;
         max_cost = current_cost;
@@ -134,7 +134,7 @@ Ego::costPLCL() {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
       //double current_cost = exp(-fabs(v.future_s() - _s));
-      double current_cost = 1. - exp(getCollisionDistance(_speed) / pow(fabs(_s - v.future_s()), 0.98));
+      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-0.98 * fabs(_s - v.future_s())));
 
       if (current_cost > max_cost) {
         max_cost = current_cost;
@@ -168,7 +168,7 @@ Ego::costPLCR() {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
       //double current_cost = exp(-fabs(v.future_s() - _s));
-      double current_cost = 1. - exp(getCollisionDistance(_speed) / pow(fabs(_s - v.future_s()), 0.98));
+      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-0.98 * fabs(_s - v.future_s())));
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }
@@ -218,7 +218,7 @@ Ego::costKLD()
       // Decrease cost for cars that are closer by since it should make this
       // option more interesting.
       // TODO: add speed to cost estimation.
-      double current_cost = 1. - 0.9 * exp(getCollisionDistance(_speed) / pow(_s - v.future_s(), 1.02));
+      double current_cost = 1. - exp(getCollisionDistance(_speed) / (_s - v.future_s()));
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }
