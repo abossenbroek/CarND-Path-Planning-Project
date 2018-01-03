@@ -42,8 +42,8 @@ private:
   double costKL();
   double costKLA();
   double costKLD();
-  double costPLCL();
-  double costPLCR();
+  double costPLCL(const vector<double>& lane_speeds);
+  double costPLCR(const vector<double>& lane_speeds);
 
 public:
   Ego(double x, double y, double s, double d, double yaw, double speed,

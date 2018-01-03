@@ -46,8 +46,8 @@ Ego::getBestTrajectory() {
     state_costs.push_back(make_tuple(EgoState::KLD, costKLD(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
     state_costs.push_back(make_tuple(EgoState::KL, costKL(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
     state_costs.push_back(make_tuple(EgoState::KLA, costKLA(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
-    state_costs.push_back(make_tuple(EgoState::PLCL, costPLCL(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
-    state_costs.push_back(make_tuple(EgoState::PLCR, costPLCR(), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
+    state_costs.push_back(make_tuple(EgoState::PLCL, costPLCL(lane_speeds), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
+    state_costs.push_back(make_tuple(EgoState::PLCR, costPLCR(lane_speeds), _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel));
 
 
     // Iterate through cost options
@@ -116,7 +116,7 @@ Ego::costKL() {
 }
 
 double
-Ego::costPLCL() {
+Ego::costPLCL(const vector<double>& lane_speeds) {
   double max_cost = exp(-5.1);
 
   cerr << "PLCL: consider lane change to: " << getLane(_d) - 1 << " given _d:" << _d << endl;
@@ -134,7 +134,12 @@ Ego::costPLCL() {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
       //double current_cost = exp(-fabs(v.future_s() - _s));
-      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-0.98 * fabs(_s - v.future_s())));
+      double new_lane_speed = lane_speeds[_lane - 1] - 0.25 * v.speed();
+      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-(lane_speeds[_lane] - new_lane_speed) / new_lane_speed * fabs(_s - v.future_s())));
+      cerr << "cost for PLCL, found future_s:" << v.future_s()
+        << " with _s: " << _s
+        << " lane_speeds[_lane]" << lane_speeds[_lane]
+        << " and lane_speeds[_lane - 1]: " << lane_speeds[_lane - 1] << endl;
 
       if (current_cost > max_cost) {
         max_cost = current_cost;
@@ -142,13 +147,13 @@ Ego::costPLCL() {
     }
   }
 
-  cerr << "cost for PLCL in lane " << _lane - 1 << " with cost " << max_cost * 2 << endl;
+  cerr << "cost for PLCL in lane " << _lane - 1 << " with cost " << max_cost << endl;
   return max_cost;
 }
 
 // TODO: add collision detection for cars behind when shifting lanes!
 double
-Ego::costPLCR() {
+Ego::costPLCR(const vector<double>& lane_speeds) {
   double max_cost = exp(-5.3);
 
   cerr << "PLCR: consider lane change to: " << getLane(_d) + 1 << " given _d:" << _d << endl;
@@ -168,7 +173,12 @@ Ego::costPLCR() {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
       //double current_cost = exp(-fabs(v.future_s() - _s));
-      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-0.98 * fabs(_s - v.future_s())));
+      double new_lane_speed = lane_speeds[_lane + 1] - 0.25 * v.speed();
+      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-(lane_speeds[_lane] - new_lane_speed) / new_lane_speed * fabs(_s - v.future_s())));
+      cerr << "cost for PLCR, found future_s:" << v.future_s()
+        << " with _s: " << _s
+        << " lane_speeds[_lane]" << lane_speeds[_lane]
+        << " and lane_speeds[_lane + 1]: " << lane_speeds[_lane + 1] << endl;
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }
@@ -187,13 +197,18 @@ Ego::costKLA()
     return MAX_COST;
   }
 
+  if (getLane(_d) != _lane) {
+    cerr << "KLA: returning max cost because lane changed is not finished" << endl;
+    return MAX_COST;
+  }
+
   double max_cost = exp(-40);
 
   for (auto& v : _vehicles) {
     if (v.possible_collision(_s, _lane, _speed + 1)) {
       // Increase cost for cars that are closer by.
       // TODO: add speed to cost estimation.
-      double current_cost = exp(-(v.future_s() - _s));
+      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-0.99 * fabs(_s - v.future_s())));
       if (current_cost > max_cost) {
         max_cost = current_cost;
       }
@@ -286,12 +301,14 @@ Ego::set_sd_derivatives(vector<double> d_prev, vector<double> s_prev, const vect
   spline_d.set_points(time_steps, d_prev);
   spline_s.set_points(time_steps, s_prev);
 
-  const double h = 0.5;
+  const double h = 1;
 
-  _s_dot = (spline_s(h) - spline_s(0)) / h;
+  // Center difference for better approximation
+  _s_dot = (spline_s(2 * h) - spline_s(0)) / (2 * h);
   _s_dot_dot = (spline_s(2 * h) - 2 * spline_s(h) + spline_s(0)) / (h * h);
 
-  _d_dot = (spline_d(h) - spline_d(0)) / h;
+  // Center difference for better approximation
+  _d_dot = (spline_d(2 * h) - spline_d(0)) / (2 * h);
   _d_dot_dot = (spline_d(2 * h) - 2 * spline_d(h) + spline_d(0)) / (h * h);
 
   cerr << "s_dot: " << _s_dot << " s_dot_dot:" << _s_dot_dot << " d_dot:" << _d_dot << " d_dot_dot:" << _d_dot_dot << endl;
@@ -305,7 +322,7 @@ Ego::get_lane_speed(vector<double>& lane_speeds) {
   for (auto& v : _vehicles) {
     int lane = v.get_lane();
 
-    if (lane >= 0 && lane <= 3 && v.in_front(_s) && v.future_s() - _s < 30) {
+    if (lane >= 0 && lane <= 3 && v.in_front(_s) && (v.future_s() - _s) < 50) {
       lane_speeds[lane] = ((lane_speeds[lane] * cars_in_lane[lane]) +
           v.speed()) / (cars_in_lane[lane] + 1);
       cars_in_lane[lane]++;
