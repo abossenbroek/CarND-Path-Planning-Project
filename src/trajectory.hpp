@@ -1,10 +1,11 @@
 #ifndef _TRAJECTORY_HPP_
 #define _TRAJECTORY_HPP_
 
-#include <vector>
-
 #include "json.hpp"
 
+#include <vector>
+
+namespace path_planner {
 class Ego;
 
 using namespace std;
@@ -35,5 +36,7 @@ public:
 
   vector<vector<double> > generatePath(double car_s, int lane, double ref_vel);
 };
+
+}
 
 #endif

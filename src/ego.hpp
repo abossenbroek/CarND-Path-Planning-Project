@@ -11,6 +11,7 @@
 
 #define MAX_COST 1
 
+namespace path_planner {
 // TODO: consider double left and double right lane change.
 
 enum EgoState {
@@ -112,5 +113,7 @@ public:
 
   void get_lane_speed(vector<double>& lane_speeds);
 };
+
+}
 
 #endif
