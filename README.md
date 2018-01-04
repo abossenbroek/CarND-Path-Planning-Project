@@ -6,6 +6,8 @@ The program main.cpp allows to generate a path for a car in a simulator. The pat
 
 Below follows an explanation of how the paths are generated.
 
+_note_: we recommend to use the chrome extension [github mathjax](https://github.com/orsharir/github-mathjax) to read this documentation to render the math.
+
 ### Path generation
 To generate the paths the path planning module uses a finite state machine with corresponding cost functions. It also calculates the positions of the cars around itself through sensor fusion and first order polynomial.
 
