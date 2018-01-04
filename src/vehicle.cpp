@@ -7,7 +7,6 @@
 
 #include <iostream>
 
-namespace path_planner {
 Vehicle::Vehicle(nlohmann::basic_json<>::value_type& sensor_readings,
     int num_forward) {
   _id = sensor_readings[0];
@@ -51,5 +50,4 @@ Vehicle::in_range(double s, int lane, double speed) {
   // We want to detect at least 4 seconds at the speed we are as collision
   // detection
   return fabs(future_s() - s) < getCollisionDistance(speed) && in_lane(lane);
-}
 }

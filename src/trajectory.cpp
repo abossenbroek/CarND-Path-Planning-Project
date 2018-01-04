@@ -8,8 +8,6 @@
 #include <vector>
 #include <stdlib.h>
 
-namespace path_planner {
-
 Trajectory::Trajectory(Ego* ego, nlohmann::basic_json<>::value_type* prev_path_x,
       nlohmann::basic_json<>::value_type* prev_path_y, double end_path_s, double end_path_d,
     vector<double>* map_waypoints_s, vector<double>* map_waypoints_x, vector<double>* map_waypoints_y) :
@@ -116,4 +114,3 @@ Trajectory::generatePath(double car_s, int lane, double ref_vel)
   return {next_x_vals, next_y_vals};
 }
 
-}

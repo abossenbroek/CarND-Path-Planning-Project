@@ -5,7 +5,6 @@
 
 #include <vector>
 
-namespace path_planner {
 class Ego;
 
 using namespace std;
@@ -36,7 +35,5 @@ public:
 
   vector<vector<double> > generatePath(double car_s, int lane, double ref_vel);
 };
-
-}
 
 #endif

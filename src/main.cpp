@@ -15,8 +15,6 @@
 #include <thread>
 #include <vector>
 
-using namespace path_planner;
-
 using namespace std;
 
 // for convenience
