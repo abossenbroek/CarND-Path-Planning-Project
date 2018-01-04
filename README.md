@@ -18,7 +18,7 @@ A Finite State Machine (FSM) permits to decide on the actions that should be tak
  * _PLCL_: Plan lane change left, this state only returns a cost lower than the maximum cost if the resulting path is still within the lane change range and no collisions would be created by the lane change. If the lane change is permitted, plan a change to the left.
  * _PLCR_: Plan lane change right, this state only returns a cost lower than the maximum cost if the resulting path is still within the lane change range and no collisions would be created by the lane change. If the lane change is permitted, plan a change to the right.
 
-The permitted changes are illustrated in the following picture ![image of FSM](http://github.com/abossenbroek/CarND-Path-Planning-Project/img/path_FSM.png). 
+The permitted changes are illustrated in the following picture ![image of FSM](https://raw.githubusercontent.com/abossenbroek/CarND-Path-Planning-Project/master/img/path_FSM.PNG). 
 
 The decision to change into a state is based on cost functions. We explain these below.
 
@@ -47,4 +47,4 @@ We generate a path by creating a spline along our longitudinal and latitudinal d
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
 
 ## Outcome
-As shown below the current implementation allows to drive at least 8.47 miles without incident ![image of long run](http://github.com/abossenbroek/CarND-Path-Planning-Project/img/udacity_path_planning_8-47miles.png).
+As shown below the current implementation allows to drive at least 8.47 miles without incident ![image of long run](https://raw.githubusercontent.com/abossenbroek/CarND-Path-Planning-Project/master/img/udacity_path_planning_8-47miles.png).
