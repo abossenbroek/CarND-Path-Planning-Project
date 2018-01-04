@@ -48,7 +48,7 @@ The implementation of the $\arg\max$ is such that the initial cost if set to a l
 We generate a path by creating a spline along our longitudinal and latitudinal data points that we want to visit. We then proceed by making the path discrete by steps dependent on the reference speed. This speed is changed by the _KLA_ and _KLD_ states.
 
 ## Simulator.
-You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
+You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab](https://github.com/udacity/self-driving-car-sim/releases).
 
 ## Outcome
 As shown below the current implementation allows to drive at least 8.47 miles without incident 
