@@ -1,140 +1,50 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
-   
-### Simulator.
+
+## Introduction
+The program main.cpp allows to generate a path for a car in a simulator. The path will seek to avoid collisions, change lanes when the current lane is too slow and avoid sudden acceleratoin, breaking and jerks.
+
+Below follows an explanation of how the paths are generated.
+
+### Path generation
+To generate the paths the path planning module uses a finite state machine with corresponding cost functions. It also calculates the positions of the cars around itself through sensor fusion and first order polynomial.
+
+#### Finite State Machine
+A Finite State Machine (FSM) permits to decide on the actions that should be taken at any given moment. The states are as follows,
+
+ * _KL_: keep lane, don't change anything to the path.
+ * _KLA_: keep lane accelerate, increase the reference speed by 0.5 mph
+ * _KLD_: keep lane decelerate, decrease the reference speed by 0.5 mph
+ * _PLCL_: Plan lane change left, this state only returns a cost lower than the maximum cost if the resulting path is still within the lane change range and no collisions would be created by the lane change. If the lane change is permitted, plan a change to the left.
+ * _PLCR_: Plan lane change right, this state only returns a cost lower than the maximum cost if the resulting path is still within the lane change range and no collisions would be created by the lane change. If the lane change is permitted, plan a change to the right.
+
+The permitted changes are illustrated in the following picture ![image of FSM](http://github.com/abossenbroek/CarND-Path-Planning-Project/img/path_FSM.png). 
+
+The decision to change into a state is based on cost functions. We explain these below.
+
+#### Cost function for change of lanes
+For the change of lanes we seek to capture sufficient dynamics that makes a lane change optimal in case that it allows us to reach a faster speed while avoiding collisions. To achieve this we define our cost as,
+$$\arg\max_{c \in P(l\pm 1)}\Bigg\lbrace 1 - e^{\frac{s_C}{-\frac{v_{l^c} - (v_{l^{c\pm 1}} - 0.25 v_c)}{(v_{l^{c\pm 1}} - 0.25 v_c)}\lvert s_e - s_c\rvert }} \Bigg\rbrace,$$
+where $c \in P(l\pm 1)$ is all the cars in the set of possible collision in lane plus or minus one. For all these cars we seek the maximum cost using a combination of the longitudinal data and lane speed data. As such, $s_C$ is the collision distance, $v_{l^c}$ is the velocity in the current lane, $v_{l^{c\pm 1}}$ is the velocity of a lane change to either left or right, $v_c$ is the velocity of the car that with which we could collide, $s_e$ the longitudinal position of the ego car and $s_c$ the future longitudinal position of the car with which we could collide. Note that if the car is not yet in its destination lane, which we know by inspecting the latitudinal data and the target lane, we return 1, which is the maximum cost. We do the same whenever the car seeks the cost to change into a non permitted lane.
+
+#### Cost function of keeping lane
+To estimate the cost of keeping the lane we only consider the cars in front of us. Given the set of cars with which we could collide we seek,
+$$\arg\max_{c \in P(l)}\Bigg\lbrace 1 - e^{\frac{s_C}{-(s_e - s_c)}} \Bigg\rbrace,$$
+this increases the cost for cars that are closer to us and decreases the cost for cars that further ahead.
+
+#### Cost function changing 
+To estimate the cost of keeping the lane we only consider the cars in front of us. Given the set of cars with which we could collide we seek,
+$$\arg\max_{c \in P(l)}\Bigg\lbrace 1 - e^{\frac{s_C}{-K(s_e - s_c)}} \Bigg\rbrace,$$
+where $K = 0.99$ for acceleration, and $K=1$ for deceleration. This will make it slightly cheaper to choose _KLD_ over _KLA_, which will cause our path planner to decrease speed.
+
+#### Final remarks
+The implementation of the $\arg\max$ is such that the initial cost if set to a lower initial value for the _KL_ state than all other states. This is to ensure that in the case of ties because no cars are in our lane we choose to stay in the current lane.
+
+### Path generation
+We generate a path by creating a spline along our longitudinal and latitudinal data points that we want to visit. We then proceed by making the path discrete by steps dependent on the reference speed. This speed is changed by the _KLA_ and _KLD_ states.
+
+## Simulator.
 You can download the Term3 Simulator which contains the Path Planning Project from the [releases tab (https://github.com/udacity/self-driving-car-sim/releases).
 
-### Goals
-In this project your goal is to safely navigate around a virtual highway with other traffic that is driving +-10 MPH of the 50 MPH speed limit. You will be provided the car's localization and sensor fusion data, there is also a sparse map list of waypoints around the highway. The car should try to go as close as possible to the 50 MPH speed limit, which means passing slower traffic when possible, note that other cars will try to change lanes too. The car should avoid hitting other cars at all cost as well as driving inside of the marked road lanes at all times, unless going from one lane to another. The car should be able to make one complete loop around the 6946m highway. Since the car is trying to go 50 MPH, it should take a little over 5 minutes to complete 1 loop. Also the car should not experience total acceleration over 10 m/s^2 and jerk that is greater than 10 m/s^3.
-
-#### The map of the highway is in data/highway_map.txt
-Each waypoint in the list contains  [x,y,s,dx,dy] values. x and y are the waypoint's map coordinate position, the s value is the distance along the road to get to that waypoint in meters, the dx and dy values define the unit normal vector pointing outward of the highway loop.
-
-The highway's waypoints loop around so the frenet s value, distance along the road, goes from 0 to 6945.554.
-
-## Basic Build Instructions
-
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./path_planning`.
-
-Here is the data provided from the Simulator to the C++ Program
-
-#### Main car's localization Data (No Noise)
-
-["x"] The car's x position in map coordinates
-
-["y"] The car's y position in map coordinates
-
-["s"] The car's s position in frenet coordinates
-
-["d"] The car's d position in frenet coordinates
-
-["yaw"] The car's yaw angle in the map
-
-["speed"] The car's speed in MPH
-
-#### Previous path data given to the Planner
-
-//Note: Return the previous list but with processed points removed, can be a nice tool to show how far along
-the path has processed since last time. 
-
-["previous_path_x"] The previous list of x points previously given to the simulator
-
-["previous_path_y"] The previous list of y points previously given to the simulator
-
-#### Previous path's end s and d values 
-
-["end_path_s"] The previous list's last point's frenet s value
-
-["end_path_d"] The previous list's last point's frenet d value
-
-#### Sensor Fusion Data, a list of all other car's attributes on the same side of the road. (No Noise)
-
-["sensor_fusion"] A 2d vector of cars and then that car's [car's unique ID, car's x position in map coordinates, car's y position in map coordinates, car's x velocity in m/s, car's y velocity in m/s, car's s position in frenet coordinates, car's d position in frenet coordinates. 
-
-## Details
-
-1. The car uses a perfect controller and will visit every (x,y) point it recieves in the list every .02 seconds. The units for the (x,y) points are in meters and the spacing of the points determines the speed of the car. The vector going from a point to the next point in the list dictates the angle of the car. Acceleration both in the tangential and normal directions is measured along with the jerk, the rate of change of total Acceleration. The (x,y) point paths that the planner recieves should not have a total acceleration that goes over 10 m/s^2, also the jerk should not go over 50 m/s^3. (NOTE: As this is BETA, these requirements might change. Also currently jerk is over a .02 second interval, it would probably be better to average total acceleration over 1 second and measure jerk from that.
-
-2. There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given, because of this its a good idea to store the last points you have used so you can have a smooth transition. previous_path_x, and previous_path_y can be helpful for this transition since they show the last points given to the simulator controller with the processed points already removed. You would either return a path that extends this previous path or make sure to create a new path that has a smooth transition with this last path.
-
-## Tips
-
-A really helpful resource for doing this project and creating smooth trajectories was using http://kluge.in-chemnitz.de/opensource/spline/, the spline function is in a single hearder file is really easy to use.
-
----
-
-## Dependencies
-
-* cmake >= 3.5
- * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `install-mac.sh` or `install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
-    ```
-    git clone https://github.com/uWebSockets/uWebSockets 
-    cd uWebSockets
-    git checkout e94b6e1
-    ```
-
-## Editor Settings
-
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
-
+## Outcome
+As shown below the current implementation allows to drive at least 8.47 miles without incident ![image of long run](http://github.com/abossenbroek/CarND-Path-Planning-Project/img/udacity_path_planning_8-47miles.png).

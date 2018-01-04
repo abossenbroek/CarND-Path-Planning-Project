@@ -1,6 +1,6 @@
 #include <vector>
 
-#include "Dense"
+#include "Eigen-3.3/Eigen/Dense"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -8,7 +8,8 @@ using namespace Eigen;
 
 using namespace std;
 
-vector<double> JMT(vector< double> start, vector <double> end, double T)
+vector<double>
+JMT(vector< double> start, vector <double> end, double T)
 {
     /*
     Calculate the Jerk Minimizing Trajectory that connects the initial state
@@ -49,4 +50,15 @@ vector<double> JMT(vector< double> start, vector <double> end, double T)
 
     return {start[0], start[1], 0.5 * start[2], x[0], x[1], x[2]};
 
+}
+
+double
+poly_est(vector<double>& coef, double x)
+{
+  double x2 = x * x;
+  double x3 = x2 * x;
+  double x4 = x3 * x;
+  double x5 = x4 * x;
+
+  return coef[0] + coef[1] * x + coef[2] * x2 + coef[3] * x3 + coef[4] * x4 + coef[5] * x5;
 }

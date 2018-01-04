@@ -7,6 +7,7 @@
 // Range within which a car in a similar lane will be considered to be in collision distance
 #define COLLISION_DISTANCE 30
 
+namespace path_planner {
 class Vehicle {
   int _id;
   double _x;
@@ -27,7 +28,8 @@ public:
   double get_lane();
   bool in_lane(int lane);
   bool in_front(double s);
-  bool possible_collision(double s, int lane);
+  bool possible_collision(double s, int lane, double speed);
+  bool in_range(double s, int lane, double speed);
 
   int id() { return this->_id; };
   double x() { return this->_x; };
