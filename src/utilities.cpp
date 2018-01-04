@@ -176,10 +176,10 @@ getMaxPermChangeRefSpeed(double current_speed, double ref_speed)
   double to_return;
   if (current_speed >= ref_speed) {
     // We are going to fast so we need to slow down
-    to_return = fmax(ref_speed - current_speed, -0.5);
+    to_return = fmax(ref_speed - current_speed, -0.3);
   } else {
     // We can go faster so lets speed up
-    to_return = fmin(ref_speed - current_speed, 0.5);
+    to_return = fmin(ref_speed - current_speed, 0.3);
   }
 
   cerr << "got current speed: " << current_speed << " and ref_speed: " << ref_speed << " determined to change " << to_return << " total will be" << to_return + current_speed << endl;

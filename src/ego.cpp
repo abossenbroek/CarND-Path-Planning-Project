@@ -322,7 +322,7 @@ Ego::get_lane_speed(vector<double>& lane_speeds) {
   for (auto& v : _vehicles) {
     int lane = v.get_lane();
 
-    if (lane >= 0 && lane <= 3 && v.in_front(_s) && (v.future_s() - _s) < 50) {
+    if (lane >= 0 && lane <= 3 && v.in_front(_s) && (v.future_s() - _s) < 40) {
       lane_speeds[lane] = ((lane_speeds[lane] * cars_in_lane[lane]) +
           v.speed()) / (cars_in_lane[lane] + 1);
       cars_in_lane[lane]++;
