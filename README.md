@@ -27,16 +27,16 @@ The permitted changes are illustrated in the following picture
 The decision to change into a state is based on cost functions. We explain these below.
 
 ### Cost function for keeping lane
-The cost for keeping lane is set to $e^{-5.05}$ by default. If a collision is detected at most .75 seconds times the velocity ahead of it, the cost function returns 1 which is the maximum cost.
+The cost for keeping lane is set to $e^{-5.05}$ by default. If a collision is detected at most 5 meters ahead of ego vehicle, the cost function returns 1 which is the maximum cost.
 
 ### Cost function for accelerating lane
-The cost for accelerating in a lane is set to $e^{-5.1}$ by default so that it is by default slightly cheaper than state _KL_. If a collision is detected at most 1.5 seconds times the velocity ahead of it, the cost function returns 1 which is the maximum cost. It does the same if the speed will be higher than the maximum allowed speed.
+The cost for accelerating in a lane is set to $e^{-5}$ by default so that it is by default slightly cheaper than state _KL_. If a possibility for collision is detected at most 20 meters in front of the ego vehicle, the cost function returns 1 which is the maximum cost. It does the same if the speed will be higher than the maximum allowed speed.
 
 ### Cost function for decelerating lane
-The cost for accelerating in a lane is set to $e^{-5}$. If a collision is detected at most 0.6 seconds times the velocity ahead of it, the cost function returns $e^{-5.2}$ so that it choose to reduce the speed. If the car will come to a standstill the cost function returns 1, the maximum cost.
+The cost for accelerating in a lane is set to $e^{-5.05}$. If a collision is detected at most 2 meters ahead of ego vehicle, the cost function returns $e^{-5.2}$ so that it choose to reduce the speed. If the car will come to a standstill the cost function returns 1, the maximum cost.
 
 ### Cost function for planning shifting lane left and right
-The cost for planning shifting lane left and right in a lane is set to $e^{-5}$. A collision distance is calculated to give either to give the fastest car, between ego and the other vehicle, 1.5 seconds to change in the front and 0.75 second in the back. If a collision is detected the maximum cost is returned. Otherwise the initial value is discounted as follows, $$c_{init} \cdot \min\lbrace 1, e^{-(l_{c \pm 1} - l_c)}\rbrace$$, where $c_{init}$ is our initial cost, $l_{c}$ the lane speed of our current lane and $l_{c \pm 1}$ the lane speed of either the left or right lane. The discount factor will make it more attractive to choose lanes that have traffic traveling faster than our current lane.
+The cost for planning shifting lane left and right in a lane is set to $e^{-5}$. If a collision possibility is detected within 20 meters in front and 10 meters behind the ego vehicle the maximum cost is returned. Otherwise the initial value is discounted as follows, $$c_{init} \cdot \min\lbrace 1, e^{-(l_{c \pm 1} - l_c)}\rbrace$$, where $c_{init}$ is our initial cost, $l_{c}$ the lane speed of our current lane and $l_{c \pm 1}$ the lane speed of either the left or right lane. The discount factor will make it more attractive to choose lanes that have traffic traveling faster than our current lane.
 
 
 ### Path generation
