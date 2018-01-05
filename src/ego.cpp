@@ -27,7 +27,6 @@ using namespace std;
 
 vector<vector<double> >
 Ego::getBestTrajectory() {
-
   EgoState next_state = EgoState::KL;
   vector<vector<double> > best_trajectory;
   double best_ref_vel = _ref_vel;
@@ -194,10 +193,12 @@ Ego::costKL() {
     if (v.possible_collision(_s, _lane, _speed)) {
       // Decrease cost for cars that are closer by since it should make this
       // option more interesting.
-      double current_cost = 1. - exp(getCollisionDistance(_speed) / (_s - v.future_s()));
-      if (current_cost > max_cost) {
-        max_cost = current_cost;
-      }
+      cerr << "KLD: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed, 0.25) << endl;
+      return MAX_COST;
+//      double current_cost = 1. - exp(getCollisionDistance(_speed) / (_s - v.future_s()));
+//      if (current_cost > max_cost) {
+//        max_cost = current_cost;
+//      }
     }
   }
 
@@ -206,7 +207,7 @@ Ego::costKL() {
 
 double
 Ego::costPLCL(const vector<double>& lane_speeds) {
-  double max_cost = exp(-5.1);
+  double max_cost = exp(-5);
 
   if (getLane(_d) != _lane) {
     return MAX_COST;
@@ -216,29 +217,36 @@ Ego::costPLCL(const vector<double>& lane_speeds) {
   }
 
   for (auto& v : _vehicles) {
-    if (v.in_range(_s, _lane - 1, _speed)) {
-      // Increase cost for cars that are closer by and for lanes that are
-      // slower than ours, vice versa decrease for lanes that are faster than
-      // ours. Ensure that a penalty is included for the speed of the car that
-      // we are overpassing. If we don't count for this, the car sometimes
-      // rushes to PLCL.
-      double new_lane_speed = lane_speeds[_lane - 1] - 0.25 * v.speed();
-      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-(lane_speeds[_lane] - new_lane_speed) / new_lane_speed * fabs(_s - v.future_s())));
-
-      if (current_cost > max_cost) {
-        max_cost = current_cost;
-      }
+    if (v.possible_collision(_s, _lane - 1, _speed)) {
+      cerr << "PLCL: Possible collision: getCollision front distance: " << getCollisionDistance(_speed, 0.75) << " getCollision back distance: " << getCollisionDistance(_speed, 0.25) << endl;
+      cerr << "PLCL: returning max cost because possible collision detected" << endl;
+      return MAX_COST;
     }
+//    if (v.in_range(_s, _lane - 1, _speed)) {
+//      // Increase cost for cars that are closer by and for lanes that are
+//      // slower than ours, vice versa decrease for lanes that are faster than
+//      // ours. Ensure that a penalty is included for the speed of the car that
+//      // we are overpassing. If we don't count for this, the car sometimes
+//      // rushes to PLCL.
+//      double current_cost = 1. - exp(getCollisionDistance(_speed) / (- (lane_speeds[_lane] - lane_speeds[_lane - 1])  / lane_speeds[_lane - 1] * fabs(_s - v.future_s())));
+//
+//      if (current_cost > max_cost) {
+//        max_cost = current_cost;
+//      }
+//    }
   }
+
+  max_cost *= fmin(1, exp(-( lane_speeds[_lane - 1] - lane_speeds[_lane])));
+
+  cerr << "cost for PLCL in lane " << _lane - 1 << " with cost " << max_cost << endl;
 
   return max_cost;
 }
 
 double
 Ego::costPLCR(const vector<double>& lane_speeds) {
-  double max_cost = exp(-5.3);
+  double max_cost = exp(-5);
 
-  cerr << "PLCR: consider lane change to: " << getLane(_d) + 1 << " given _d:" << _d << endl;
   // Ensure that the car doesn't leave the highway.
   if ((getLane(_d) + 1) > 2 || (_lane + 1) > 2) {
     cerr << "PLCR: returning max cost" << endl;
@@ -251,25 +259,31 @@ Ego::costPLCR(const vector<double>& lane_speeds) {
   }
 
   for (auto& v : _vehicles) {
-    if (v.in_range(_s, _lane + 1, _speed)) {
-      // Increase cost for cars that are closer by and for lanes that are
-      // slower than ours, vice versa decrease for lanes that are faster than
-      // ours. Ensure that a penalty is included for the speed of the car that
-      // we are overpassing. If we don't count for this, the car sometimes
-      // rushes to PLCR.
-      double new_lane_speed = lane_speeds[_lane + 1] - 0.25 * v.speed();
-      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-(lane_speeds[_lane] - new_lane_speed) / new_lane_speed * fabs(_s - v.future_s())));
-      if (current_cost > max_cost) {
-        max_cost = current_cost;
-      }
+    if (v.possible_collision(_s, _lane + 1, _speed)) {
+      cerr << "PLCR: Possible collision: getCollision front distance: " << getCollisionDistance(_speed, 0.75) << " getCollision back distance: " << getCollisionDistance(_speed, 0.25) << endl;
+      cerr << "PLCR: returning max cost because possible collision detected" << endl;
+      return MAX_COST;
     }
+//    if (v.in_range(_s, _lane + 1, _speed)) {
+//      // Increase cost for cars that are closer by and for lanes that are
+//      // slower than ours, vice versa decrease for lanes that are faster than
+//      // ours. Ensure that a penalty is included for the speed of the car that
+//      // we are overpassing. If we don't count for this, the car sometimes
+//      // rushes to PLCR.
+//      double new_lane_speed = lane_speeds[_lane + 1]; // - 0.25 * v.speed();
+//      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-(lane_speeds[_lane] - new_lane_speed) / new_lane_speed * fabs(_s - v.future_s())));
+//      if (current_cost > max_cost) {
+//        max_cost = current_cost;
+//      }
+//    }
   }
+  max_cost *= fmin(1, exp(-(lane_speeds[_lane + 1] - lane_speeds[_lane])));
 
   cerr << "cost for PLCR in lane " << _lane + 1 << " with cost " << max_cost << endl;
   return max_cost;
 }
 
-  double
+double
 Ego::costKLA()
 {
   if (getLane(_d) != _lane) {
@@ -279,22 +293,29 @@ Ego::costKLA()
     return MAX_COST;
   }
 
-  double max_cost = exp(-40);
+  double max_cost = exp(-5.001);
 
   for (auto& v : _vehicles) {
     if (v.possible_collision(_s, _lane, _speed + 1)) {
-      // Increase cost for cars that are closer by.
-      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-0.99 * fabs(_s - v.future_s())));
-      if (current_cost > max_cost) {
-        max_cost = current_cost;
-      }
+      cerr << "KLA: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed, 0.25) << endl;
+      return MAX_COST;
     }
+    // TODO: fix speed increase
+//    if (v.in_range_front(_s, _lane, _speed + 1, 2.0)) {
+//      // Increase cost for cars that are closer by.
+//      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-0.99 * fabs(_s - v.future_s())));
+//      if (current_cost > max_cost) {
+//        max_cost = current_cost;
+//      }
+//    }
   }
+
+  cerr << "cost for KLA in lane " << _lane  << " with cost " << max_cost << endl;
 
   return max_cost;
 }
 
-  double
+double
 Ego::costKLD()
 {
   if ((_speed - 0.5) < 0 || (_ref_vel - 0.5) < 0) {
@@ -302,19 +323,23 @@ Ego::costKLD()
     return MAX_COST;
   }
 
-  double max_cost = exp(-20);
+  double max_cost = exp(-5);
 
   for (auto& v : _vehicles) {
-    if (v.possible_collision(_s, _lane, _speed - 1)) {
+    if (v.possible_collision(_s, _lane, _speed - 1) && v.in_front(_s)) {
+      cerr << "KLD: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed, 0.25) << endl;
+      return exp(-4.9);
       // Decrease cost for cars that are closer by since it should make this
       // option more interesting.
       // TODO: add speed to cost estimation.
-      double current_cost = 1. - exp(getCollisionDistance(_speed) / (_s - v.future_s()));
-      if (current_cost > max_cost) {
-        max_cost = current_cost;
-      }
+//      double current_cost = 1. - exp(getCollisionDistance(_speed) / (_s - v.future_s()));
+//      if (current_cost > max_cost) {
+//        max_cost = current_cost;
+//      }
     }
   }
+
+  cerr << "cost for KLD in lane " << _lane  << " with cost " << max_cost << endl;
 
   return max_cost;
 }
@@ -376,3 +401,28 @@ Ego::get_lane_speed(vector<double>& lane_speeds) {
     }
   }
 }
+
+double
+Ego::getMaxPermChangeRefSpeed(double current_speed, double ref_speed)
+{
+  double to_return;
+  // Calculate our maximum permitted acceleration.
+  double max_perm_accel = fmin(9.41, fabs(ref_speed - speed()) / 0.02);
+  cerr << "getMaxPerm: max accel" << max_perm_accel << endl;
+  double max_perm_speed_change = 0.02 * max_perm_accel;
+  cerr << "getMaxPerm: max_speed_change" << max_perm_speed_change << endl;
+
+  if (current_speed >= ref_speed) {
+    // We are going to fast so we need to slow down
+    to_return = fmax(ref_speed - current_speed, -max_perm_speed_change);
+  } else {
+    // We can go faster so lets speed up
+    to_return = fmin(ref_speed - current_speed, max_perm_speed_change);
+  }
+
+  to_return += current_speed;
+  cerr << "getMaxPerm: final speed" << max_perm_speed_change << endl;
+
+  return to_return;
+}
+

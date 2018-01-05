@@ -42,12 +42,16 @@ Vehicle::in_front(double s) {
 
 bool
 Vehicle::possible_collision(double s, int lane, double speed) {
-  return in_front(s) && in_range(s, lane, speed);
+  return in_range(s, lane, speed, 1.5, 1.0);
 }
 
 bool
-Vehicle::in_range(double s, int lane, double speed) {
-  // We want to detect at least 4 seconds at the speed we are as collision
-  // detection
-  return fabs(future_s() - s) < getCollisionDistance(speed) && in_lane(lane);
+Vehicle::in_range(double s, int lane, double speed, double time_in_front, double time_in_back) {
+  return ((in_front(s) && (future_s() - s) < getCollisionDistance(speed, time_in_front))
+    || (!in_front(s) && (s - future_s()) < getCollisionDistance(speed, time_in_back))) && in_lane(lane);
+}
+
+bool
+Vehicle::in_range_front(double s, int lane, double speed, double range) {
+  return in_front(s) && (future_s() - s) < getCollisionDistance(speed, range);
 }

@@ -17,7 +17,8 @@ double rad2deg(double x) { return x * 180 / M_PI; }
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
-string hasData(string s) {
+string
+hasData(string s) {
   auto found_null = s.find("null");
   auto b1 = s.find_first_of("[");
   auto b2 = s.find_first_of("}");
@@ -172,25 +173,9 @@ push_circular(vector<double>& circular_buffer, double new_val)
   circular_buffer[i] = new_val;
 }
 
-  double
-getMaxPermChangeRefSpeed(double current_speed, double ref_speed)
+
+double
+getCollisionDistance(double speed, double time)
 {
-  double to_return;
-  if (current_speed >= ref_speed) {
-    // We are going to fast so we need to slow down
-    to_return = fmax(ref_speed - current_speed, -0.3);
-  } else {
-    // We can go faster so lets speed up
-    to_return = fmin(ref_speed - current_speed, 0.3);
-  }
-
-  to_return += current_speed;
-
-  return to_return;
-}
-
-  double
-getCollisionDistance(double speed)
-{
-  return speed / MPH_TO_MS_CONSTANT * 2.0;
+  return speed / MPH_TO_MS_CONSTANT * time;
 }

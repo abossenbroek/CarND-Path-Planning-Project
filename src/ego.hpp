@@ -107,6 +107,7 @@ public:
   double getSpeedClosestBehind(int lane, bool& found_car);
   void set_sd_derivatives(vector<double> d_prev, vector<double> s_prev, const vector<int>& steps);
 
+  double getMaxPermChangeRefSpeed(double current_speed, double ref_speed);
 
   void get_lane_speed(vector<double>& lane_speeds);
 };
