@@ -25,159 +25,88 @@ using namespace std;
 // for PLCL: the cost should be high if a vehicle is in the lane
 // for PLCR: the cost should be high if a vehicle is in the lane
 
+EgoState
+Ego::transition(const vector<double>& lane_speeds)
+{
+  double lowest_cost = MAX_COST;
+  EgoState next_state = EgoState::KL;
+  vector< tuple<EgoState, double> >
+    state_costs = {
+      make_tuple(EgoState::KLD, costKLD()),
+      make_tuple(EgoState::KL, costKL()),
+      make_tuple(EgoState::KLA, costKLA(lane_speeds)),
+      make_tuple(EgoState::PLCL, costPLCL(lane_speeds)),
+      make_tuple(EgoState::PLCR, costPLCR(lane_speeds)),
+    };
+
+  // Iterate through cost options
+  for (int i = 0; i < state_costs.size(); ++i ) {
+    cerr << "transition: for state: " << get<0>(state_costs[i]) << " got cost: " << get<1>(state_costs[i]) << endl;
+    if (lowest_cost > get<1>(state_costs[i])) {
+      next_state = get<0>(state_costs[i]);
+      lowest_cost = get<1>(state_costs[i]);
+    }
+  }
+
+  return next_state;
+}
+
+
 vector<vector<double> >
 Ego::getBestTrajectory() {
   EgoState next_state = EgoState::KL;
+  // Get the speed for each lane
+  vector<double> lane_speeds = {0, 0, 0};
+  get_lane_speed(lane_speeds);
+
+  // Get the best next state if we have a state that permits this. This reduces
+  // redundant calculations.
+  EgoState candidate_state = transition(lane_speeds);
   vector<vector<double> > best_trajectory;
   double best_ref_vel = _ref_vel;
-  vector<double> lane_speeds = {0, 0, 0};
-  // Get the speed for each lane
-  get_lane_speed(lane_speeds);
   vector<double> s_start = {_s, _s_dot, _s_dot_dot};
   vector<double> d_start = {_d, _d_dot, _d_dot_dot};
 
-  if (_state == EgoState::KL) {
-    cerr << "In state KL in lane:" << _lane << " with s:" << _s << "speed "
-      << _speed << endl;
+  switch (_state) {
+    case EgoState::KLA:
+      cerr << "### In state KLA" << endl;
+      next_state = candidate_state;
+      best_ref_vel = getMaxPermChangeRefSpeed(_ref_vel, lane_speeds[_lane]);
+      best_trajectory = _trajectory->generatePath(_s, _lane, best_ref_vel );
+      break;
 
-    double lowest_cost = MAX_COST + 0.1;
+    case EgoState::KLD:
+      cerr << "### In state KLD" << endl;
+      next_state = candidate_state;
+      best_ref_vel = getMaxPermChangeRefSpeed(_ref_vel, lane_speeds[_lane]);
+      best_trajectory = _trajectory->generatePath(_s, _lane, best_ref_vel);
+      break;
 
-    /* TODO: to set a smoother acceleration and jerk. Currently generatePath
-     * takes only a single _s and single _d. This should be changed to 5-th
-     * order polynomial. We'll also have to change the _ref_vel accordingly.
-     */
-    vector<double> s_coef =
-      JMT(s_start, {_speed / MPH_TO_MS_CONSTANT * 6.0, 0, 0}, 6);
-    vector<double> d_coef =
-      JMT(d_start, {static_cast<double>(_lane), 0, 0}, 6);
-    cerr << "s_coef[0]: " << s_coef[0]
-      << " s_coef[1]: " << s_coef[1]
-      << " s_coef[2]: " << s_coef[2]
-      << " s_coef[3]: " << s_coef[3]
-      << " s_coef[4]: " << s_coef[4]
-      << " s_coef[5]: " << s_coef[5] << endl;
-    cerr << "d_coef[0]: " << d_coef[0]
-      << " d_coef[1]: " << d_coef[1]
-      << " d_coef[2]: " << d_coef[2]
-      << " d_coef[3]: " << d_coef[3]
-      << " d_coef[4]: " << d_coef[4]
-      << " d_coef[5]: " << d_coef[5] << endl;
+    case EgoState::KL:
+      cerr << "### In state KL" << endl;
+      next_state =  candidate_state;
+      best_trajectory = _trajectory->generatePath(_s, _lane, _ref_vel);
+      best_ref_vel = _ref_vel;
+      break;
 
-    vector< tuple<EgoState, double, vector<vector<double> >, double > >
-      state_costs = {
-        make_tuple(EgoState::KLD, costKLD(),
-            _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel),
-        make_tuple(EgoState::KL, costKL(),
-            _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel),
-        make_tuple(EgoState::KLA, costKLA(),
-            _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel),
-        make_tuple(EgoState::PLCL, costPLCL(lane_speeds),
-            _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel),
-        make_tuple(EgoState::PLCR, costPLCR(lane_speeds),
-            _trajectory->generatePath(_s, _lane, _ref_vel), _ref_vel)
-      };
+    case EgoState::PLCL:
+      cerr << "### In state PLCL" << endl;
+      best_trajectory = _trajectory->generatePath(_s, _lane - 1, _ref_vel);
+      _lane -= 1;
+      best_ref_vel = _ref_vel;
+      next_state = EgoState::KL;
+      break;
 
+    case EgoState::PLCR:
+      cerr << "### In state PLCR" << endl;
+      best_trajectory = _trajectory->generatePath(_s, _lane + 1, _ref_vel);
+      _lane += 1;
+      best_ref_vel = _ref_vel;
+      next_state = EgoState::KL;
+      break;
 
-    // Iterate through cost options
-    for (int i = 0; i < state_costs.size(); ++i ) {
-      if (lowest_cost > get<1>(state_costs[i])) {
-        next_state = get<0>(state_costs[i]);
-        lowest_cost = get<1>(state_costs[i]);
-        best_trajectory = get<2>(state_costs[i]);
-        best_ref_vel = get<3>(state_costs[i]);
-      }
-    }
-  } else if (_state == EgoState::PLCL) {
-    cerr << "In state PLCL" << endl;
-
-    // TODO: convert time to dependency on speed.
-    vector<double> s_coef =
-      JMT(s_start, {_speed / MPH_TO_MS_CONSTANT * 6.0, 0, 0}, 6);
-    vector<double> d_coef =
-      JMT(d_start, {static_cast<double>(_lane - 1), 0, 0}, 6);
-    cerr << "s_coef[0]: " << s_coef[0]
-      << " s_coef[1]: " << s_coef[1]
-      << " s_coef[2]: " << s_coef[2]
-      << " s_coef[3]: " << s_coef[3]
-      << " s_coef[4]: " << s_coef[4]
-      << " s_coef[5]: " << s_coef[5] << endl;
-    cerr << "d_coef[0]: " << d_coef[0]
-      << " d_coef[1]: " << d_coef[1]
-      << " d_coef[2]: " << d_coef[2]
-      << " d_coef[3]: " << d_coef[3]
-      << " d_coef[4]: " << d_coef[4]
-      << " d_coef[5]: " << d_coef[5] << endl;
-    best_trajectory = _trajectory->generatePath(_s, _lane - 1, _ref_vel);
-    _lane -= 1;
-    best_ref_vel = _ref_vel;
-    next_state = EgoState::KL;
-  } else if (_state == EgoState::PLCR) {
-    cerr << "In state PLCR" << endl;
-
-    vector<double> s_coef =
-      JMT(s_start, {_speed / MPH_TO_MS_CONSTANT * 6.0, 0, 0}, 6);
-    vector<double> d_coef =
-      JMT(d_start, {static_cast<double>(_lane - 1), 0, 0}, 6);
-    cerr << "s_coef[0]: " << s_coef[0]
-      << " s_coef[1]: " << s_coef[1]
-      << " s_coef[2]: " << s_coef[2]
-      << " s_coef[3]: " << s_coef[3]
-      << " s_coef[4]: " << s_coef[4]
-      << " s_coef[5]: " << s_coef[5] << endl;
-    cerr << "d_coef[0]: " << d_coef[0]
-      << " d_coef[1]: " << d_coef[1]
-      << " d_coef[2]: " << d_coef[2]
-      << " d_coef[3]: " << d_coef[3]
-      << " d_coef[4]: " << d_coef[4]
-      << " d_coef[5]: " << d_coef[5] << endl;
-    best_trajectory = _trajectory->generatePath(_s, _lane + 1, _ref_vel);
-    _lane += 1;
-    best_ref_vel = _ref_vel;
-    next_state = EgoState::KL;
-  } else if (_state == EgoState::KLA) {
-    cerr << "In state KLA" << endl;
-
-    vector<double> s_coef =
-      JMT(s_start, {_speed / MPH_TO_MS_CONSTANT * 6.0, 0, 0}, 6);
-    vector<double> d_coef =
-      JMT(d_start, {static_cast<double>(_lane), 0, 0}, 6);
-    cerr << "s_coef[0]: " << s_coef[0]
-      << " s_coef[1]: " << s_coef[1]
-      << " s_coef[2]: " << s_coef[2]
-      << " s_coef[3]: " << s_coef[3]
-      << " s_coef[4]: " << s_coef[4]
-      << " s_coef[5]: " << s_coef[5] << endl;
-    cerr << "d_coef[0]: " << d_coef[0]
-      << " d_coef[1]: " << d_coef[1]
-      << " d_coef[2]: " << d_coef[2]
-      << " d_coef[3]: " << d_coef[3]
-      << " d_coef[4]: " << d_coef[4]
-      << " d_coef[5]: " << d_coef[5] << endl;
-    best_ref_vel = getMaxPermChangeRefSpeed(_ref_vel, lane_speeds[_lane]);
-    best_trajectory = _trajectory->generatePath(_s, _lane, best_ref_vel );
-    next_state = EgoState::KL;
-  } else if (_state == EgoState::KLD) {
-    cerr << "In state KLD" << endl;
-
-    vector<double> s_coef =
-      JMT(s_start, {_speed / MPH_TO_MS_CONSTANT * 6.0, 0, 0}, 6);
-    vector<double> d_coef =
-      JMT(d_start, {static_cast<double>(_lane), 0, 0}, 6);
-    cerr << "s_coef[0]: " << s_coef[0]
-      << " s_coef[1]: " << s_coef[1]
-      << " s_coef[2]: " << s_coef[2]
-      << " s_coef[3]: " << s_coef[3]
-      << " s_coef[4]: " << s_coef[4]
-      << " s_coef[5]: " << s_coef[5] << endl;
-    cerr << "d_coef[0]: " << d_coef[0]
-      << " d_coef[1]: " << d_coef[1]
-      << " d_coef[2]: " << d_coef[2]
-      << " d_coef[3]: " << d_coef[3]
-      << " d_coef[4]: " << d_coef[4]
-      << " d_coef[5]: " << d_coef[5] << endl;
-    best_ref_vel = getMaxPermChangeRefSpeed(_ref_vel, lane_speeds[_lane]);
-    best_trajectory = _trajectory->generatePath(_s, _lane, best_ref_vel);
-    next_state = EgoState::KL;
+    default:
+      cerr << "FSM State unknown";
   }
 
   _state = next_state;
@@ -190,10 +119,10 @@ Ego::costKL() {
   double max_cost = exp(-5);
 
   for (auto& v : _vehicles) {
-    if (v.possible_collision(_s, _lane, _speed)) {
+    if (v.possible_collision(_s, _lane, _speed) && v.in_front(_s)) {
       // Decrease cost for cars that are closer by since it should make this
       // option more interesting.
-      cerr << "KLD: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed, 0.25) << endl;
+      cerr << "KL: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed, 1.5) << endl;
       return MAX_COST;
 //      double current_cost = 1. - exp(getCollisionDistance(_speed) / (_s - v.future_s()));
 //      if (current_cost > max_cost) {
@@ -218,7 +147,7 @@ Ego::costPLCL(const vector<double>& lane_speeds) {
 
   for (auto& v : _vehicles) {
     if (v.possible_collision(_s, _lane - 1, _speed)) {
-      cerr << "PLCL: Possible collision: getCollision front distance: " << getCollisionDistance(_speed, 0.75) << " getCollision back distance: " << getCollisionDistance(_speed, 0.25) << endl;
+      cerr << "PLCL: Possible collision: getCollision front distance: " << getCollisionDistance(_speed, 1.5) << " getCollision back distance: " << getCollisionDistance(_speed, 0.75) << endl;
       cerr << "PLCL: returning max cost because possible collision detected" << endl;
       return MAX_COST;
     }
@@ -237,8 +166,6 @@ Ego::costPLCL(const vector<double>& lane_speeds) {
   }
 
   max_cost *= fmin(1, exp(-( lane_speeds[_lane - 1] - lane_speeds[_lane])));
-
-  cerr << "cost for PLCL in lane " << _lane - 1 << " with cost " << max_cost << endl;
 
   return max_cost;
 }
@@ -260,31 +187,18 @@ Ego::costPLCR(const vector<double>& lane_speeds) {
 
   for (auto& v : _vehicles) {
     if (v.possible_collision(_s, _lane + 1, _speed)) {
-      cerr << "PLCR: Possible collision: getCollision front distance: " << getCollisionDistance(_speed, 0.75) << " getCollision back distance: " << getCollisionDistance(_speed, 0.25) << endl;
+      cerr << "PLCR: Possible collision: getCollision front distance: " << getCollisionDistance(_speed, 1.5) << " getCollision back distance: " << getCollisionDistance(_speed, 0.75) << endl;
       cerr << "PLCR: returning max cost because possible collision detected" << endl;
       return MAX_COST;
     }
-//    if (v.in_range(_s, _lane + 1, _speed)) {
-//      // Increase cost for cars that are closer by and for lanes that are
-//      // slower than ours, vice versa decrease for lanes that are faster than
-//      // ours. Ensure that a penalty is included for the speed of the car that
-//      // we are overpassing. If we don't count for this, the car sometimes
-//      // rushes to PLCR.
-//      double new_lane_speed = lane_speeds[_lane + 1]; // - 0.25 * v.speed();
-//      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-(lane_speeds[_lane] - new_lane_speed) / new_lane_speed * fabs(_s - v.future_s())));
-//      if (current_cost > max_cost) {
-//        max_cost = current_cost;
-//      }
-//    }
   }
   max_cost *= fmin(1, exp(-(lane_speeds[_lane + 1] - lane_speeds[_lane])));
 
-  cerr << "cost for PLCR in lane " << _lane + 1 << " with cost " << max_cost << endl;
   return max_cost;
 }
 
 double
-Ego::costKLA()
+Ego::costKLA(const vector<double>& lane_speeds)
 {
   if (getLane(_d) != _lane) {
     return MAX_COST;
@@ -296,18 +210,10 @@ Ego::costKLA()
   double max_cost = exp(-5.001);
 
   for (auto& v : _vehicles) {
-    if (v.possible_collision(_s, _lane, _speed + 1)) {
-      cerr << "KLA: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed, 0.25) << endl;
+    if (v.in_range_front(_s, _lane, _speed + getMaxPermChangeRefSpeed(_ref_vel, lane_speeds[_lane]), 1.5)) {
+      cerr << "KLA: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed + getMaxPermChangeRefSpeed(_ref_vel, lane_speeds[_lane]), 1.5) << endl;
       return MAX_COST;
     }
-    // TODO: fix speed increase
-//    if (v.in_range_front(_s, _lane, _speed + 1, 2.0)) {
-//      // Increase cost for cars that are closer by.
-//      double current_cost = 1. - exp(getCollisionDistance(_speed) / (-0.99 * fabs(_s - v.future_s())));
-//      if (current_cost > max_cost) {
-//        max_cost = current_cost;
-//      }
-//    }
   }
 
   cerr << "cost for KLA in lane " << _lane  << " with cost " << max_cost << endl;
@@ -326,16 +232,9 @@ Ego::costKLD()
   double max_cost = exp(-5);
 
   for (auto& v : _vehicles) {
-    if (v.possible_collision(_s, _lane, _speed - 1) && v.in_front(_s)) {
-      cerr << "KLD: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed, 0.25) << endl;
-      return exp(-4.9);
-      // Decrease cost for cars that are closer by since it should make this
-      // option more interesting.
-      // TODO: add speed to cost estimation.
-//      double current_cost = 1. - exp(getCollisionDistance(_speed) / (_s - v.future_s()));
-//      if (current_cost > max_cost) {
-//        max_cost = current_cost;
-//      }
+    if (v.in_range_front(_s, _lane, _speed, 1)) {
+      cerr << "KLD: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed, 1) << endl;
+      return exp(-5.2);
     }
   }
 
@@ -408,9 +307,9 @@ Ego::getMaxPermChangeRefSpeed(double current_speed, double ref_speed)
   double to_return;
   // Calculate our maximum permitted acceleration.
   double max_perm_accel = fmin(9.41, fabs(ref_speed - speed()) / 0.02);
-  cerr << "getMaxPerm: max accel" << max_perm_accel << endl;
+//  cerr << "getMaxPerm: max accel" << max_perm_accel << endl;
   double max_perm_speed_change = 0.02 * max_perm_accel;
-  cerr << "getMaxPerm: max_speed_change" << max_perm_speed_change << endl;
+ // cerr << "getMaxPerm: max_speed_change" << max_perm_speed_change << endl;
 
   if (current_speed >= ref_speed) {
     // We are going to fast so we need to slow down
@@ -421,7 +320,7 @@ Ego::getMaxPermChangeRefSpeed(double current_speed, double ref_speed)
   }
 
   to_return += current_speed;
-  cerr << "getMaxPerm: final speed" << max_perm_speed_change << endl;
+  //cerr << "getMaxPerm: final speed" << max_perm_speed_change << endl;
 
   return to_return;
 }

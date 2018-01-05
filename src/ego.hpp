@@ -38,10 +38,12 @@ private:
   double _d_dot_dot;
 
   double costKL();
-  double costKLA();
+  double costKLA(const vector<double>& lane_speeds);
   double costKLD();
   double costPLCL(const vector<double>& lane_speeds);
   double costPLCR(const vector<double>& lane_speeds);
+
+  EgoState transition(const vector<double>& lane_speeds);
 
 public:
   Ego(double x, double y, double s, double d, double yaw, double speed,

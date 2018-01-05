@@ -42,13 +42,13 @@ Vehicle::in_front(double s) {
 
 bool
 Vehicle::possible_collision(double s, int lane, double speed) {
-  return in_range(s, lane, speed, 1.5, 1.0);
+  return in_range(s, lane, speed, 1.5, 1.00);
 }
 
 bool
 Vehicle::in_range(double s, int lane, double speed, double time_in_front, double time_in_back) {
-  return ((in_front(s) && (future_s() - s) < getCollisionDistance(speed, time_in_front))
-    || (!in_front(s) && (s - future_s()) < getCollisionDistance(speed, time_in_back))) && in_lane(lane);
+  return (fmax(future_s(), future_s() - s) < fmax(getCollisionDistance(speed, time_in_front), getCollisionDistance(_speed, time_in_front))
+      || fmax(future_s(), s - future_s()) < getCollisionDistance(_speed, time_in_back)) && in_lane(lane);
 }
 
 bool

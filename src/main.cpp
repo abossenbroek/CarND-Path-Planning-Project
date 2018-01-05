@@ -66,7 +66,7 @@ int main() {
 
   // Have a reference velocity to target.
   //double ref_vel = 49.5; // mph
-  double ref_vel = 6; // mph
+  double ref_vel = 5; // mph
 
   EgoState egoState = EgoState::KL;
 
