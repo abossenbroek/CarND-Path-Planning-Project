@@ -41,17 +41,23 @@ Vehicle::in_front(double s) {
 }
 
 bool
-Vehicle::possible_collision(double s, int lane, double speed) {
-  return in_range(s, lane, speed, 1.5, 1.00);
+Vehicle::possible_collision(double s, int lane) {
+  return in_range(s, lane, 15, 5);
 }
 
 bool
-Vehicle::in_range(double s, int lane, double speed, double time_in_front, double time_in_back) {
-  return (fmax(future_s(), future_s() - s) < fmax(getCollisionDistance(speed, time_in_front), getCollisionDistance(_speed, time_in_front))
-      || fmax(future_s(), s - future_s()) < getCollisionDistance(_speed, time_in_back)) && in_lane(lane);
+Vehicle::in_range(double s, int lane, double dist_in_front, double dist_in_back) {
+  if (in_lane(lane)) {
+    if (in_front(s)) {
+      return (future_s() - s) < dist_in_front;
+    } else {
+      return (s - future_s()) < dist_in_back;
+    }
+  }
+  return false;
 }
 
 bool
-Vehicle::in_range_front(double s, int lane, double speed, double range) {
-  return in_front(s) && (future_s() - s) < getCollisionDistance(speed, range);
+Vehicle::in_range_front(double s, int lane, double range) {
+  return in_front(s) && ((future_s() - s) < range) && in_lane(lane);
 }

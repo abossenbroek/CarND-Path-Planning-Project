@@ -27,9 +27,9 @@ public:
   double get_lane();
   bool in_lane(int lane);
   bool in_front(double s);
-  bool possible_collision(double s, int lane, double speed);
-  bool in_range(double s, int lane, double speed, double time_in_front, double time_in_back);
-  bool in_range_front(double s, int lane, double speed, double range);
+  bool possible_collision(double s, int lane);
+  bool in_range(double s, int lane, double dist_in_front, double dist_in_back);
+  bool in_range_front(double s, int lane, double range);
 
   int id() { return this->_id; };
   double x() { return this->_x; };

@@ -32,9 +32,9 @@ Ego::transition(const vector<double>& lane_speeds)
   EgoState next_state = EgoState::KL;
   vector< tuple<EgoState, double> >
     state_costs = {
-      make_tuple(EgoState::KLD, costKLD()),
       make_tuple(EgoState::KL, costKL()),
       make_tuple(EgoState::KLA, costKLA(lane_speeds)),
+      make_tuple(EgoState::KLD, costKLD()),
       make_tuple(EgoState::PLCL, costPLCL(lane_speeds)),
       make_tuple(EgoState::PLCR, costPLCR(lane_speeds)),
     };
@@ -116,83 +116,17 @@ Ego::getBestTrajectory() {
 
 double
 Ego::costKL() {
-  double max_cost = exp(-5);
+  double max_cost = exp(-5.05);
 
   for (auto& v : _vehicles) {
-    if (v.possible_collision(_s, _lane, _speed) && v.in_front(_s)) {
+    if (v.in_range_front(_s, getLane(_d), 2)) {
+      cerr << "KL: future_s:" << v.future_s() << endl;
+      cerr << "KL: lane:" << v.get_lane() << endl;
       // Decrease cost for cars that are closer by since it should make this
       // option more interesting.
-      cerr << "KL: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed, 1.5) << endl;
-      return MAX_COST;
-//      double current_cost = 1. - exp(getCollisionDistance(_speed) / (_s - v.future_s()));
-//      if (current_cost > max_cost) {
-//        max_cost = current_cost;
-//      }
-    }
-  }
-
-  return max_cost;
-}
-
-double
-Ego::costPLCL(const vector<double>& lane_speeds) {
-  double max_cost = exp(-5);
-
-  if (getLane(_d) != _lane) {
-    return MAX_COST;
-  }
-  if ((getLane(_d) - 1) < 0 || (_lane - 1) < 0) {
-    return MAX_COST;
-  }
-
-  for (auto& v : _vehicles) {
-    if (v.possible_collision(_s, _lane - 1, _speed)) {
-      cerr << "PLCL: Possible collision: getCollision front distance: " << getCollisionDistance(_speed, 1.5) << " getCollision back distance: " << getCollisionDistance(_speed, 0.75) << endl;
-      cerr << "PLCL: returning max cost because possible collision detected" << endl;
-      return MAX_COST;
-    }
-//    if (v.in_range(_s, _lane - 1, _speed)) {
-//      // Increase cost for cars that are closer by and for lanes that are
-//      // slower than ours, vice versa decrease for lanes that are faster than
-//      // ours. Ensure that a penalty is included for the speed of the car that
-//      // we are overpassing. If we don't count for this, the car sometimes
-//      // rushes to PLCL.
-//      double current_cost = 1. - exp(getCollisionDistance(_speed) / (- (lane_speeds[_lane] - lane_speeds[_lane - 1])  / lane_speeds[_lane - 1] * fabs(_s - v.future_s())));
-//
-//      if (current_cost > max_cost) {
-//        max_cost = current_cost;
-//      }
-//    }
-  }
-
-  max_cost *= fmin(1, exp(-( lane_speeds[_lane - 1] - lane_speeds[_lane])));
-
-  return max_cost;
-}
-
-double
-Ego::costPLCR(const vector<double>& lane_speeds) {
-  double max_cost = exp(-5);
-
-  // Ensure that the car doesn't leave the highway.
-  if ((getLane(_d) + 1) > 2 || (_lane + 1) > 2) {
-    cerr << "PLCR: returning max cost" << endl;
-    return MAX_COST;
-  }
-
-  if (getLane(_d) != _lane) {
-    cerr << "PLCR: returning max cost because lane changed is not finished" << endl;
-    return MAX_COST;
-  }
-
-  for (auto& v : _vehicles) {
-    if (v.possible_collision(_s, _lane + 1, _speed)) {
-      cerr << "PLCR: Possible collision: getCollision front distance: " << getCollisionDistance(_speed, 1.5) << " getCollision back distance: " << getCollisionDistance(_speed, 0.75) << endl;
-      cerr << "PLCR: returning max cost because possible collision detected" << endl;
       return MAX_COST;
     }
   }
-  max_cost *= fmin(1, exp(-(lane_speeds[_lane + 1] - lane_speeds[_lane])));
 
   return max_cost;
 }
@@ -207,16 +141,13 @@ Ego::costKLA(const vector<double>& lane_speeds)
     return MAX_COST;
   }
 
-  double max_cost = exp(-5.001);
+  double max_cost = exp(-5.1);
 
   for (auto& v : _vehicles) {
-    if (v.in_range_front(_s, _lane, _speed + getMaxPermChangeRefSpeed(_ref_vel, lane_speeds[_lane]), 1.5)) {
-      cerr << "KLA: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed + getMaxPermChangeRefSpeed(_ref_vel, lane_speeds[_lane]), 1.5) << endl;
+    if (v.in_range_front(_s, getLane(_d), 5)) {
       return MAX_COST;
     }
   }
-
-  cerr << "cost for KLA in lane " << _lane  << " with cost " << max_cost << endl;
 
   return max_cost;
 }
@@ -232,16 +163,71 @@ Ego::costKLD()
   double max_cost = exp(-5);
 
   for (auto& v : _vehicles) {
-    if (v.in_range_front(_s, _lane, _speed, 1)) {
-      cerr << "KLD: Found possible collision: getCollision front distance: " << getCollisionDistance(_speed, 1) << endl;
-      return exp(-5.2);
+    if (v.in_range_front(_s, getLane(_d), 2)) {
+      // Add the second to ensure that KLD is more attractive only if lane
+      // changes result in less than 1.2 mph increases.
+      return exp(-5) * exp(-1.2);
     }
   }
 
-  cerr << "cost for KLD in lane " << _lane  << " with cost " << max_cost << endl;
+  return max_cost;
+}
+
+
+double
+Ego::costPLCL(const vector<double>& lane_speeds) {
+  double max_cost = exp(-5);
+
+  if (getLane(_d) != _lane) {
+    cerr << "PLCL: found unallowed turn" << endl;
+    return MAX_COST;
+  }
+  if ((getLane(_d) - 1) < 0 || (_lane - 1) < 0) {
+    cerr << "PLCL: found incomplete turn" << endl;
+    return MAX_COST;
+  }
+
+  for (auto& v : _vehicles) {
+    if (v.possible_collision(_s, _lane - 1)) {
+      cerr << "PLCL: found car at: " << v.future_s() << endl;
+
+      return MAX_COST;
+    }
+  }
+
+  cerr << "PLCL: will discount with " << fmin(1, exp(-( lane_speeds[_lane - 1] - lane_speeds[_lane]))) << endl;
+  max_cost *= fmin(1, exp(-( lane_speeds[_lane - 1] - lane_speeds[_lane])));
 
   return max_cost;
 }
+
+double
+Ego::costPLCR(const vector<double>& lane_speeds) {
+  double max_cost = exp(-5);
+
+  // Ensure that the car doesn't leave the highway.
+  if ((getLane(_d) + 1) > 2 || (_lane + 1) > 2) {
+    cerr << "PLCR: found unallowed turn" << endl;
+    return MAX_COST;
+  }
+
+  if (getLane(_d) != _lane) {
+    cerr << "PLCR: found incomplete turn" << endl;
+    return MAX_COST;
+  }
+
+  for (auto& v : _vehicles) {
+    if (v.possible_collision(_s, _lane + 1)) {
+      cerr << "PLCR: found car at: " << v.future_s() << endl;
+      return MAX_COST;
+    }
+  }
+  cerr << "PLCR: will discount with " << fmin(1, exp(-( lane_speeds[_lane + 1] - lane_speeds[_lane]))) << endl;
+  max_cost *= fmin(1, exp(-(lane_speeds[_lane + 1] - lane_speeds[_lane])));
+
+  return max_cost;
+}
+
 
   void
 Ego::set_sd_derivatives(vector<double> d_prev, vector<double> s_prev, const vector<int>& steps)
@@ -281,8 +267,6 @@ Ego::set_sd_derivatives(vector<double> d_prev, vector<double> s_prev, const vect
   // Center difference for better approximation
   _d_dot = (spline_d(2 * h) - spline_d(0)) / (2 * h);
   _d_dot_dot = (spline_d(2 * h) - 2 * spline_d(h) + spline_d(0)) / (h * h);
-
-  cerr << "s_dot: " << _s_dot << " s_dot_dot:" << _s_dot_dot << " d_dot:" << _d_dot << " d_dot_dot:" << _d_dot_dot << endl;
 }
 
 void
@@ -306,7 +290,7 @@ Ego::getMaxPermChangeRefSpeed(double current_speed, double ref_speed)
 {
   double to_return;
   // Calculate our maximum permitted acceleration.
-  double max_perm_accel = fmin(9.41, fabs(ref_speed - speed()) / 0.02);
+  double max_perm_accel = fmin(20, fabs(ref_speed - speed()) / 0.02);
 //  cerr << "getMaxPerm: max accel" << max_perm_accel << endl;
   double max_perm_speed_change = 0.02 * max_perm_accel;
  // cerr << "getMaxPerm: max_speed_change" << max_perm_speed_change << endl;
