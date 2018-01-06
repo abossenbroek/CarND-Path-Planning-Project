@@ -134,9 +134,6 @@ Ego::costKL() {
 double
 Ego::costKLA(const vector<double>& lane_speeds)
 {
-  if (getLane(_d) != _lane) {
-    return MAX_COST;
-  }
   if ((_speed + 1) > 49.5 || (_ref_vel + 1) > 49.5) {
     return MAX_COST;
   }
@@ -160,10 +157,15 @@ Ego::costKLD()
     return MAX_COST;
   }
 
-  double max_cost = exp(-5);
+  double max_cost = MAX_COST;
 
   for (auto& v : _vehicles) {
-    if (v.in_range_front(_s, getLane(_d), 2)) {
+    bool is_car_in_lane = v.in_lane(getLane(_d)) || v.in_lane(_lane);
+    bool is_car_ahead = v.s() > _s;
+
+    if (is_car_in_lane && is_car_ahead) {
+      cerr << "KL: found vehicle at: " << v.s();
+      double dist = v.s() - _s;
       // Add the second to ensure that KLD is more attractive only if lane
       // changes result in less than 1.2 mph increases.
       return exp(-5) * exp(-1.2);
@@ -179,11 +181,11 @@ Ego::costPLCL(const vector<double>& lane_speeds) {
   double max_cost = exp(-5);
 
   if (getLane(_d) != _lane) {
-    cerr << "PLCL: found unallowed turn" << endl;
+    cerr << "PLCL: found incomplete turn" << endl;
     return MAX_COST;
   }
   if ((getLane(_d) - 1) < 0 || (_lane - 1) < 0) {
-    cerr << "PLCL: found incomplete turn" << endl;
+    cerr << "PLCL: found unallowed turn" << endl;
     return MAX_COST;
   }
 

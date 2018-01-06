@@ -48,10 +48,15 @@ Vehicle::possible_collision(double s, int lane) {
 bool
 Vehicle::in_range(double s, int lane, double dist_in_front, double dist_in_back) {
   if (in_lane(lane)) {
-    if (in_front(s)) {
-      return (future_s() - s) < dist_in_front;
+    double closest_to_us_back = fmin(fmax(future_s() - s, 0), fmax(_s - s, 0));
+    double closest_to_us_front = fmin(fmax(s - future_s(), 0), fmax(s - _s, 0));
+    cerr << "in_range found lane to be accurate " << endl;
+    if (closest_to_us_front > 0) {
+      cerr << "closest_to_us_front positive: " << closest_to_us_front <<  endl;
+      return closest_to_us_front < dist_in_front;
     } else {
-      return (s - future_s()) < dist_in_back;
+      cerr << "closest_to_us_front equal to zero, closest_to_us_back: " << closest_to_us_back << endl;
+      return closest_to_us_back < dist_in_back;
     }
   }
   return false;
